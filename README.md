@@ -31,6 +31,8 @@
 
 ## 🚀 快速开始
 
+### 本地启动
+
 ```bash
 # 1. 克隆项目
 git clone https://github.com/your-username/fanqie-web-reader.git
@@ -49,6 +51,33 @@ python server.py
 ```
 
 启动后访问 [http://localhost:8080](http://localhost:8080)
+
+### Docker 启动
+
+```bash
+docker compose up -d
+```
+
+启动后访问 [http://localhost:8199](http://localhost:8199)
+
+### 段评功能说明
+
+段评（段落评论）默认使用 **Mock 数据**，无需额外配置即可体验界面。
+
+如需获取真实段评数据，需自行部署 [fqnovel-unidbg](https://github.com/mtongle/fqnovel-unidbg) 后端服务。部署后通过环境变量配置：
+
+| 环境变量 | 默认值 | 说明 |
+|---|---|---|
+| `PARA_COMMENT_MOCK` | `true` | 设为 `false` 启用真实段评接口 |
+| `UNIDBG_API` | `http://127.0.0.1:8099` | unidbg 签名代理地址 |
+
+本地启动示例：
+
+```bash
+PARA_COMMENT_MOCK=false UNIDBG_API=http://127.0.0.1:8099 python server.py
+```
+
+Docker Compose 已预配置 Redis 和环境变量，只需将 `PARA_COMMENT_MOCK` 改为 `false` 并确保 unidbg 服务可达即可。
 
 ## 📁 项目结构
 

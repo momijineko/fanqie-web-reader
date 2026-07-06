@@ -166,6 +166,7 @@ function changeFontSizeTo(sz) {
   document.querySelectorAll('.settings-slider').forEach(sl => {
     if (sl.min === '14' && sl.max === '28') sl.value = sz;
   });
+  document.querySelectorAll('#fontSizeValue, #fontSizeValue2').forEach(el => el.textContent = sz);
   readerSettingsChanged();
 }
 
@@ -185,6 +186,7 @@ function changeLineHeightTo(lh) {
   document.querySelectorAll('.settings-slider').forEach(sl => {
     if (sl.min === '14' && sl.max === '24') sl.value = Math.round(lh * 10);
   });
+  document.querySelectorAll('#lineHeightValue, #lineHeightValue2').forEach(el => el.textContent = lh.toFixed(1));
   readerSettingsChanged();
 }
 

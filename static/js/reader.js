@@ -98,10 +98,12 @@ function renderScrollReader(app, bid, idx) {
         <button class="settings-btn-sm" onclick="changeFontSize(-1)">A-</button>
         <input type="range" class="settings-slider" id="fontSizeSlider" min="14" max="28" step="1" value="${fontSize}" oninput="changeFontSizeTo(+this.value)">
         <button class="settings-btn-sm" onclick="changeFontSize(1)">A+</button>
+        <span class="settings-value" id="fontSizeValue">${fontSize}</span>
       </div>
       <div class="settings-row">
         <span class="settings-label">行距</span>
         <input type="range" class="settings-slider" id="lineHeightSlider" min="14" max="24" step="1" value="${Math.round(lineHeight*10)}" oninput="changeLineHeightTo(+this.value/10)">
+        <span class="settings-value" id="lineHeightValue">${lineHeight.toFixed(1)}</span>
       </div>
       <div class="settings-row">
         <span class="settings-label">字体</span>
@@ -274,10 +276,12 @@ function renderPageReader(app, bid, idx) {
               <button class="settings-btn-sm" onclick="pgFontSize(-1)">A-</button>
               <input type="range" class="settings-slider" min="14" max="28" step="1" value="${fontSize}" oninput="changeFontSizeTo(+this.value);pgCalcDelayed()">
               <button class="settings-btn-sm" onclick="pgFontSize(1)">A+</button>
+              <span class="settings-value" id="fontSizeValue2">${fontSize}</span>
             </div>
             <div class="settings-row">
               <span class="settings-label">行距</span>
               <input type="range" class="settings-slider" min="14" max="24" step="1" value="${Math.round(lineHeight*10)}" oninput="changeLineHeightTo(+this.value/10);pgCalcDelayed()">
+              <span class="settings-value" id="lineHeightValue2">${lineHeight.toFixed(1)}</span>
             </div>
             <div class="settings-row">
               <span class="settings-label">字体</span>
@@ -545,9 +549,8 @@ function handlePageTap(e, zone) {
 
 // Handle clicks on page-container: delegate to tap zones, but let badge clicks through
 function handlePageContainerClick(e) {
-  // If badge was clicked, let its own onclick handle it
   if (e.target.closest('.para-badge')) return;
-  // If toolbar is open, let toolbar handle its own clicks
+  if (e.target.closest('#pageToolbar')) return;
   if ($('pageToolbar') && $('pageToolbar').classList.contains('open')) return;
 
   const container = $('pageContainer');
