@@ -113,7 +113,7 @@
 .btn-outline.active { background: var(--accent-light); color: var(--accent); border-color: var(--accent) !important; }
 .book-detail-actions .btn-primary { flex: 1 1 100%; }
 .book-detail-actions .btn-outline { flex: 1 1 0; min-width: 0; }
-.detail-sticky { position: fixed; bottom: 0; left: 0; right: 0; z-index: 90; max-width: 720px; margin: 0 auto; padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--card-bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--border); box-shadow: 0 -4px 16px rgba(0,0,0,0.06); }
+.detail-sticky { position: fixed; bottom: 0; left: 0; right: 0; z-index: 90; max-width: 720px; margin: 0 auto; padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); background: var(--card-bg); background: color-mix(in srgb, var(--card-bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--border); box-shadow: 0 -4px 16px rgba(0,0,0,0.06); }
 .detail-sticky .btn-primary { display: block; width: 100%; padding: 12px; border: none; border-radius: var(--radius-pill); font-size: var(--fs-md); cursor: pointer; }
 .detail-sticky .btn-primary:active { background: var(--accent-hover); transform: scale(0.98); }
 .detail-sticky-spacer { height: calc(64px + env(safe-area-inset-bottom)); }

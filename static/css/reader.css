@@ -39,9 +39,9 @@
 .scroll-reader .reader-content { padding: 0 var(--sp-5); font-size: var(--reader-font-size, 17px); font-family: var(--reader-font-family, inherit); position: relative; max-width: 680px; margin: 0 auto; }
 .scroll-reader .reader-content p { text-indent: 2em; margin-bottom: 1.2em; color: var(--reader-text); line-height: var(--reader-line-height, 1.85); letter-spacing: 0.02em; }
 .scroll-reader .para-wrap { position: relative; }
-.scroll-reader .para-wrap .para-badge { display: none; position: relative; z-index: 2; font-size: var(--fs-xs); font-weight: 600; line-height: 1; color: var(--accent); background: var(--badge-bg); padding: 1.5px 7px; border-radius: var(--radius-pill); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; align-items: center; justify-content: center; min-width: 22px; min-height: 18px; transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05); vertical-align: middle; margin-left: 6px; text-indent: 0; letter-spacing: 0.02em; }
+.scroll-reader .para-wrap .para-badge { display: none; position: relative; z-index: 2; font-size: var(--fs-xs); font-weight: 600; line-height: 1; color: var(--accent); background: var(--badge-bg); padding: 1.5px 7px; border-radius: var(--radius-pill); border: 1px solid var(--accent-light); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; align-items: center; justify-content: center; min-width: 22px; min-height: 18px; transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05); vertical-align: middle; margin-left: 6px; text-indent: 0; letter-spacing: 0.02em; }
 .scroll-reader .para-wrap.has-comments .para-badge { display: inline-flex; }
-.scroll-reader .para-wrap .para-badge:hover, .scroll-reader .para-wrap .para-badge:active { transform: scale(1.08); background-color: var(--accent-light); box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 15%, transparent); }
+.scroll-reader .para-wrap .para-badge:hover, .scroll-reader .para-wrap .para-badge:active { transform: scale(1.08); background-color: var(--accent-light); box-shadow: 0 2px 6px var(--accent-light); box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 15%, transparent); }
 .scroll-reader .author-speak { background: var(--author-bg); border-left: 3px solid var(--author-border); padding: var(--sp-3) var(--sp-4); margin: var(--sp-5) 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: var(--fs-sm); color: var(--author-text); line-height: var(--lh-relaxed); }
 .scroll-reader img.content-img { max-width: 100%; height: auto; display: block; margin: 16px auto; border-radius: var(--radius); cursor: zoom-in; box-shadow: var(--shadow-md); }
 .scroll-reader .auto-next-indicator { text-align: center; padding: 28px 20px; color: var(--text-muted); font-size: 12px; }
@@ -109,11 +109,12 @@
 /* ==================== Paginated Reader ==================== */
 .paginated-reader {
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  height: 100vh; height: 100dvh;
+  height: 100vh;
   background: var(--reader-bg); z-index: 200;
   display: flex; flex-direction: column; overflow: hidden;
   transition: background 0.25s;
 }
+@supports (height: 100dvh) { .paginated-reader { height: 100dvh; } }
 .page-header {
   display: flex; align-items: center; padding: var(--sp-2) var(--sp-4); gap: var(--sp-2);
   background: var(--reader-bg); border-bottom: 1px solid var(--border);
@@ -157,9 +158,9 @@
 .page-page p { text-indent: 2em; margin-bottom: 0.8em; }
 .page-page p:last-child { margin-bottom: 0; }
 .page-page .para-wrap { position: relative; }
-.page-page .para-wrap .para-badge { display: none; position: relative; z-index: 2; font-size: var(--fs-xs); font-weight: 600; line-height: 1; color: var(--accent); background: var(--badge-bg); padding: 1.5px 7px; border-radius: var(--radius-pill); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; align-items: center; justify-content: center; min-width: 22px; min-height: 18px; transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05); vertical-align: middle; margin-left: 6px; text-indent: 0; letter-spacing: 0.02em; }
+.page-page .para-wrap .para-badge { display: none; position: relative; z-index: 2; font-size: var(--fs-xs); font-weight: 600; line-height: 1; color: var(--accent); background: var(--badge-bg); padding: 1.5px 7px; border-radius: var(--radius-pill); border: 1px solid var(--accent-light); border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent); cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; align-items: center; justify-content: center; min-width: 22px; min-height: 18px; transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 1px 3px rgba(0,0,0,0.05); vertical-align: middle; margin-left: 6px; text-indent: 0; letter-spacing: 0.02em; }
 .page-page .para-wrap.has-comments .para-badge { display: inline-flex; }
-.page-page .para-wrap .para-badge:hover, .page-page .para-wrap .para-badge:active { transform: scale(1.08); background-color: var(--accent-light); box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 15%, transparent); }
+.page-page .para-wrap .para-badge:hover, .page-page .para-wrap .para-badge:active { transform: scale(1.08); background-color: var(--accent-light); box-shadow: 0 2px 6px var(--accent-light); box-shadow: 0 2px 6px color-mix(in srgb, var(--accent) 15%, transparent); }
 .page-page .author-speak {
   background: var(--author-bg); border-left: 3px solid var(--author-border);
   padding: 12px 16px; margin: 14px 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
