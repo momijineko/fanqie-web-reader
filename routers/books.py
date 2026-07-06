@@ -1,5 +1,6 @@
 import re
 import subprocess
+from pathlib import Path
 
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse, JSONResponse
@@ -7,6 +8,14 @@ from fastapi.responses import FileResponse, JSONResponse
 from shared import COMMUNITY_API, client
 
 router = APIRouter()
+
+
+@router.get("/.well-known/assetlinks.json")
+async def assetlinks():
+    path = Path("static/.well-known/assetlinks.json")
+    if path.exists():
+        return FileResponse(path, media_type="application/json")
+    return JSONResponse(status_code=404, content={"error": "not found"})
 
 
 @router.get("/api/version")
