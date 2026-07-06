@@ -282,14 +282,14 @@ def _normalize_comments(raw) -> list:
     review_candidates = []
 
     def _collect_from(node, depth=0):
-        if depth > 4:
+        if depth > 6:
             return
         if isinstance(node, list):
             review_candidates.append(node)
             return
         if not isinstance(node, dict):
             return
-        for key in ["reviews", "list", "data_list", "comment_list", "comments", "ideas"]:
+        for key in ["reviews", "list", "data_list", "comment_list", "comments", "comment", "ideas"]:
             v = node.get(key)
             if isinstance(v, list):
                 review_candidates.append(v)
