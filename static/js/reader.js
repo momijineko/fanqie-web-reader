@@ -301,9 +301,9 @@ function renderPageReader(app, bid, idx) {
           </div>
           <div class="sheet-divider"></div>
           <div class="nav-row">
-            <button ${prevDisabled?'disabled':''} onclick="pgSwitchChapter(${idx-1},-1)">上一章</button>
+            <button ${prevDisabled?'disabled':''} onclick="pgSwitchChapter(${idx-1},-1)"><i data-lucide="chevron-left" width="16" height="16"></i> 上一章</button>
             <button onclick="showChapterList()">目录</button>
-            <button ${nextDisabled?'disabled':''} onclick="pgSwitchChapter(${idx+1},0)">下一章</button>
+            <button class="btn-accent" ${nextDisabled?'disabled':''} onclick="pgSwitchChapter(${idx+1},0)">下一章 <i data-lucide="chevron-right" width="16" height="16"></i></button>
           </div>
           <div class="slider-row">
             <input type="range" id="pageSlider" min="1" max="1" value="1" oninput="pgSliderGo(this.value)">
@@ -603,6 +603,13 @@ async function pgSwitchChapter(newIdx, startPageHint) {
   const footerLeft = document.querySelector('.page-footer-left');
   if (footerLeft) footerLeft.innerHTML = `<span>${escapeHtml(d.bookName)}</span><span>·</span><span>第${newIdx+1}/${pg.total}章</span>`;
 
+  const navRow = document.querySelector('.page-toolbar-bottom .nav-row');
+  if (navRow) {
+    const btns = navRow.querySelectorAll('button');
+    if (btns[0]) { btns[0].disabled = newIdx <= 0; btns[0].onclick = () => pgSwitchChapter(newIdx - 1, -1); }
+    if (btns[2]) { btns[2].disabled = newIdx >= pg.total - 1; btns[2].onclick = () => pgSwitchChapter(newIdx + 1, 0); }
+  }
+
   // Recalculate pages — this rebuilds viewport children
   pgCalculatePages();
   loadParaCommentCounts(chapterId);
@@ -704,8 +711,10 @@ function closeChapterList() {
 
 // ====== Toolbar ======
 function toggleToolbar() {
-  const tb = $('pageToolbar');
-  if (tb) tb.classList.toggle('open');
+  const ptb = $('pageToolbar');
+  if (ptb) { ptb.classList.toggle('open'); return; }
+  const stb = $('readerToolbar');
+  if (stb) stb.classList.toggle('hidden-toolbar');
 }
 function pgFontSize(d) { changeFontSize(d); setTimeout(()=>pgCalculatePages(),150); }
 function pgLineHeight(d) { changeLineHeight(d); setTimeout(()=>pgCalculatePages(),150); }

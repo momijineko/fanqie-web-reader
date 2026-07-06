@@ -224,9 +224,11 @@
 .page-toolbar-bottom .nav-row button {
   flex: 1; padding: 12px; border: none; background: transparent;
   color: var(--text-secondary); font-size: 14px; cursor: pointer; position: relative;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
 }
 .page-toolbar-bottom .nav-row button:active { color: var(--accent); }
 .page-toolbar-bottom .nav-row button:disabled { opacity: 0.3; }
+.page-toolbar-bottom .nav-row button.btn-accent { color: var(--accent); font-weight: 600; }
 .page-toolbar-bottom .nav-row button + button::before { content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 1px; height: 20px; background: var(--border); }
 .page-toolbar-bottom .slider-row { display: flex; align-items: center; gap: 12px; padding: 10px 20px 16px; }
 .page-toolbar-bottom .slider-row input[type=range] {
