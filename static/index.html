@@ -24,13 +24,12 @@
   </div>
   <img id="imgViewerContent" src="" alt="" draggable="false">
 </div>
-<div class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i data-lucide="arrow-up" width="18" height="18"></i></div>
+<div class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:isEink()?'instant':'smooth'})"><i data-lucide="arrow-up" width="18" height="18"></i></div>
 
 <div class="header">
   <div class="header-top">
     <button class="back-btn hidden" id="backBtn" onclick="goBack()"><i data-lucide="chevron-left" width="22" height="22"></i></button>
     <h1 id="pageTitle">番茄小说</h1>
-    <button class="icon-btn" id="themeBtn" onclick="toggleTheme(event)"><i data-lucide="sun" width="16" height="16"></i></button>
   </div>
   <div class="search-bar" id="searchBar">
     <i data-lucide="search" class="search-icon" width="16" height="16"></i>
@@ -52,6 +51,10 @@
     <i data-lucide="book-open" width="22" height="22"></i>
     <span>书架</span>
   </a>
+  <a class="bottom-nav-item" data-route="profile" onclick="navigate('profile')">
+    <i data-lucide="user" width="22" height="22"></i>
+    <span>我的</span>
+  </a>
 </nav>
 
 <script src="/static/js/app.js"></script>
@@ -60,5 +63,24 @@
 <script src="/static/js/reader.js"></script>
 <script src="/static/js/main.js"></script>
 <script>lucide.createIcons();</script>
+<script>
+(function(){
+  if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+  var ws = new WebSocket('ws://' + location.host + '/ws/hot');
+  ws.onmessage = function(e) {
+    var msg = JSON.parse(e.data);
+    if (msg.type === 'css') {
+      document.querySelectorAll('link[rel="stylesheet"]').forEach(function(link) {
+        var href = link.getAttribute('href') || '';
+        if (href.indexOf(msg.path.replace('static/','/static/')) !== -1) {
+          link.href = href.split('?')[0] + '?t=' + Date.now();
+        }
+      });
+    } else {
+      location.reload();
+    }
+  };
+})();
+</script>
 </body>
 </html>

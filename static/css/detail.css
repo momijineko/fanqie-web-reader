@@ -136,6 +136,7 @@
 .chapter-item:active { background: var(--badge-bg); }
 .chapter-item-read { color: var(--text-muted); }
 .chapter-item-current { color: var(--accent); font-weight: 600; background: var(--accent-light); }
+.chapter-item-badge { font-size: 10px; color: var(--accent); background: var(--accent-light); padding: 1px 5px; border-radius: 3px; margin-left: 6px; font-weight: 500; }
 .chapter-item-time { font-size: var(--fs-xs); color: var(--text-muted); flex-shrink: 0; margin-left: 8px; }
 
 /* Chapter slider */

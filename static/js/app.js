@@ -71,9 +71,65 @@ function timeAgo(ts) {
 // ---- Theme (4 modes, system auto) ----
 function getTheme() { return localStorage.getItem('readerTheme') || 'auto'; }
 function initTheme() {
+  if (isEink()) {
+    document.body.classList.add('theme-eink');
+    setReadMode('no-anim');
+    _initEinkScroll();
+    return;
+  }
   const saved = getTheme();
   if (saved === 'auto') applyTheme('auto');
   else applyTheme(saved);
+}
+
+let _einkScrollInited = false;
+
+function _initEinkScroll() {
+  _einkScrollInited = true;
+  const body = document.body;
+  let touchY = 0;
+
+  body.addEventListener('touchstart', e => {
+    touchY = e.touches[0].clientY;
+  }, { passive: true });
+
+  body.addEventListener('touchmove', e => {
+    if (e.target.closest('#pageContainer, .scroll-reader')) return;
+    e.preventDefault();
+  }, { passive: false });
+
+  const _getScrollCtx = e => {
+    const panel = e.target.closest('.para-comment-panel');
+    if (panel) {
+      const scroller = panel.querySelector('.panel-comments');
+      if (scroller) return { el: scroller, top: scroller.scrollTop, max: scroller.scrollHeight - scroller.clientHeight };
+    }
+    return { el: null, top: window.scrollY, max: document.body.scrollHeight - window.innerHeight };
+  };
+
+  body.addEventListener('touchend', e => {
+    if (e.target.closest('#pageContainer, .scroll-reader')) return;
+    const dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dy) < 20) return;
+    const dir = dy < 0 ? 1 : -1;
+    const ctx = _getScrollCtx(e);
+    const vh = (ctx.el ? ctx.el.clientHeight : window.innerHeight) * 0.9;
+    const target = ctx.top + dir * vh;
+    if (ctx.el) ctx.el.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'instant' });
+    else window.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'instant' });
+  });
+
+  body.addEventListener('wheel', e => {
+    if (e.target.closest('#pageContainer, .scroll-reader')) return;
+    e.preventDefault();
+    if (Math.abs(e.deltaY) < 30) return;
+    const dir = e.deltaY > 0 ? 1 : -1;
+    const ctx = _getScrollCtx(e);
+    const vh = (ctx.el ? ctx.el.clientHeight : window.innerHeight) * 0.9;
+    const target = ctx.top + dir * vh;
+    if (ctx.el) ctx.el.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'instant' });
+    else window.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'instant' });
+  }, { passive: false });
 }
 // Last click position for circular reveal animation
 let _themeClickX = 0, _themeClickY = 0;
@@ -85,7 +141,8 @@ function applyThemeFrom(e, themeId) {
 
 function applyTheme(themeId) {
   const doApply = () => {
-    document.body.classList.remove('theme-default', 'theme-sepia', 'theme-green', 'theme-dark');
+    document.body.classList.remove('theme-default', 'theme-sepia', 'theme-green', 'theme-dark', 'theme-eink');
+    localStorage.setItem('einkMode', 'off');
     let appliedId = themeId;
     if (themeId === 'auto') {
       const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -99,13 +156,6 @@ function applyTheme(themeId) {
         localStorage.setItem('readerLightTheme', themeId);
       }
     }
-    const btn = $('themeBtn');
-    if (btn) {
-      const iconName = themeId === 'auto' ? 'monitor' : (THEMES.find(x => x.id === themeId) || THEMES[0]).icon;
-      btn.innerHTML = `<i data-lucide="${iconName}" width="16" height="16"></i>`;
-      lucide.createIcons({ nodes: [btn] });
-    }
-    // Update swatch active states in reader toolbars
     document.querySelectorAll('.bg-swatch').forEach(s => {
       s.classList.toggle('active', s.classList.contains('swatch-' + appliedId));
     });
@@ -131,6 +181,24 @@ function toggleTheme(e) {
   const isDark = cur === 'dark' || (cur === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const lightTheme = localStorage.getItem('readerLightTheme') || 'default';
   applyTheme(isDark ? lightTheme : 'dark');
+}
+
+function isEink() { return localStorage.getItem('einkMode') === 'on'; }
+function toggleEink() {
+  if (isEink()) {
+    document.body.classList.remove('theme-eink');
+    localStorage.setItem('einkMode', 'off');
+    initTheme();
+    setReadMode('page');
+  } else {
+    document.body.classList.remove('theme-default', 'theme-sepia', 'theme-green', 'theme-dark', 'theme-eink');
+    document.body.classList.add('theme-eink');
+    localStorage.setItem('einkMode', 'on');
+    setReadMode('no-anim');
+    if (!_einkScrollInited) { _einkScrollInited = true; _initEinkScroll(); }
+  }
+  const el = $('app').firstElementChild;
+  if (el && el.classList.contains('profile-page')) renderProfile($('app'));
 }
 
 // ---- Font family ----
@@ -231,10 +299,69 @@ function saveSearchHistory(h) { localStorage.setItem('searchHistory', JSON.strin
 function saveReadingHistory(rh) { localStorage.setItem('readingHistory', JSON.stringify(rh)); }
 function saveStats(s) { localStorage.setItem('stats', JSON.stringify(s)); }
 
+function getLocalGroups() { try { return JSON.parse(localStorage.getItem('localGroups') || '[]'); } catch(e) { return []; } }
+function saveLocalGroups(g) { localStorage.setItem('localGroups', JSON.stringify(g)); }
+function findBookGroup(bookId) { return getLocalGroups().find(g => (g.bookIds || []).includes(bookId)); }
+function moveBookToLocalGroup(bookId, groupId) {
+  const groups = getLocalGroups();
+  groups.forEach(g => g.bookIds = (g.bookIds || []).filter(id => id !== bookId));
+  if (groupId) {
+    const g = groups.find(g => g.id === groupId);
+    if (g) g.bookIds = [...(g.bookIds || []), bookId];
+  }
+  saveLocalGroups(groups);
+}
+function createLocalGroup(name, bookId) {
+  const groups = getLocalGroups();
+  const g = { id: 'g_' + Date.now(), name, bookIds: bookId ? [bookId] : [] };
+  groups.push(g);
+  saveLocalGroups(groups);
+  return g.id;
+}
+function removeLocalGroup(id) {
+  saveLocalGroups(getLocalGroups().filter(g => g.id !== id));
+}
+
+function getCachedUser() { try { return JSON.parse(localStorage.getItem('cachedUser') || 'null'); } catch(e) { return null; } }
+function saveCachedUser(u) { localStorage.setItem('cachedUser', JSON.stringify(u)); }
+function clearCachedUser() { localStorage.removeItem('cachedUser'); }
+function getCachedShelf() { try { return JSON.parse(localStorage.getItem('cachedShelf') || '[]'); } catch(e) { return []; } }
+function saveCachedShelf(s) { localStorage.setItem('cachedShelf', JSON.stringify(s)); }
+function clearCachedShelf() { localStorage.removeItem('cachedShelf'); }
+
+function getBookProgress(bookId) {
+  const all = JSON.parse(localStorage.getItem('bookProgress') || '{}');
+  return all[bookId] || null;
+}
+function saveBookProgress(bookId, progress) {
+  const all = JSON.parse(localStorage.getItem('bookProgress') || '{}');
+  all[bookId] = progress;
+  localStorage.setItem('bookProgress', JSON.stringify(all));
+}
+
 function isInShelf(bookId) {
+  if (typeof _profileUser !== 'undefined' && _profileUser) return _onlineShelf.some(b => b.BookID === bookId);
   return loadData().shelf.some(b => b.bookId === bookId);
 }
 function toggleShelf(bookId, name, author, thumb) {
+  if (typeof _profileUser !== 'undefined' && _profileUser) {
+    const inCloud = _onlineShelf.some(b => b.BookID === bookId);
+    const endpoint = inCloud ? 'remove' : 'add';
+    fetch(`${API}/api/user/bookshelf/${endpoint}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ book_id: bookId }),
+    }).then(async r => {
+      if (r.ok) {
+        if (endpoint === 'add') showToast('已加入云端书架');
+        else showToast('已移出云端书架');
+        await _loadOnlineShelf();
+        const el = $('app').firstElementChild;
+        if (el && el.classList.contains('home-section')) renderShelf($('app'));
+      }
+    }).catch(() => {});
+    return !inCloud;
+  }
   const data = loadData();
   const i = data.shelf.findIndex(b => b.bookId === bookId);
   if (i >= 0) data.shelf.splice(i, 1);
@@ -567,7 +694,7 @@ function showToast(msg) {
   if (!el) {
     el = document.createElement('div');
     el.id = 'toast';
-    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;z-index:600;opacity:0;transition:opacity 0.3s';
+    el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;z-index:600;opacity:0;transition:opacity 0.3s;pointer-events:none';
     document.body.appendChild(el);
   }
   el.textContent = msg;

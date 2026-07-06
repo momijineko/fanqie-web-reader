@@ -47,6 +47,41 @@ body.theme-dark {
   --badge-bg: #2c2c2e; --author-bg: #2d2800; --author-border: #554400; --author-text: #f9e79f;
   --shadow: 0 1px 3px rgba(0,0,0,0.2); --shadow-md: 0 4px 16px rgba(0,0,0,0.3); --shadow-lg: 0 8px 24px rgba(0,0,0,0.45);
 }
+/* ---- Theme: E-ink ---- */
+body.theme-eink {
+  --bg: #fff; --card-bg: #fff; --text: #111; --text-secondary: #333; --text-muted: #555;
+  --border: #333; --accent: #111; --accent-hover: #000; --accent-light: rgba(0,0,0,0.06);
+  --reader-bg: #fff; --reader-text: #111; --reader-title: #000;
+  --badge-bg: #eee; --author-bg: #fff; --author-border: #888; --author-text: #333;
+  --shadow: none; --shadow-md: none; --shadow-lg: none;
+  --dur-fast: 0s; --dur: 0s; --dur-slow: 0s;
+}
+
+body.theme-eink .header,
+body.theme-eink .bottom-nav { backdrop-filter: none; -webkit-backdrop-filter: none; }
+body.theme-eink .profile-login-section.logged-in { background: #111; color: #fff; }
+body.theme-eink .profile-logout-btn { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.3); color: #fff; }
+body.theme-eink .btn-primary { background: #111; color: #fff; }
+body.theme-eink .btn-outline { border-color: #666; color: #333; }
+body.theme-eink .continue-card { background: #111; box-shadow: none; }
+body.theme-eink .bg-swatches-row { display: none !important; }
+body.theme-eink .bg-mode-row { display: none !important; }
+body.theme-eink .reader-bottom-sheet,
+body.theme-eink .page-toolbar-overlay { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: transparent !important; }
+body.theme-eink .discover-card,
+body.theme-eink .skel-discover-card { background: var(--card-bg) !important; box-shadow: none; border: 1px solid var(--border); color: var(--text); }
+body.theme-eink .hot-tag:active { background: var(--text) !important; color: var(--bg) !important; }
+body.theme-eink .home-empty .hot-tag { border-color: var(--border); }
+body.theme-eink .cover-badge { opacity: 1; font-weight: 700; }
+body.theme-eink .cover-badge.ongoing { background: #333; color: #fff; border: 1px solid #111; }
+body.theme-eink .cover-badge.finished { background: #111; color: #fff; border: 1px solid #000; }
+body.theme-eink .cover-badge.updated { background: #fff; color: #111; border: 1px solid #333; }
+body.theme-eink .cover-badge.stopped { background: #888; color: #fff; border: 1px solid #666; }
+body.theme-eink .cover-badge.readall { background: #fff; color: #111; border: 1px solid #333; }
+body.theme-eink *, body.theme-eink *::before, body.theme-eink *::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+}
 
 body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.8; transition: background var(--dur), color var(--dur); padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
 

@@ -8,3 +8,5 @@ test_font_dl.woff2
 *.png
 unidbg/unidbg-boot-server.jar
 unidbg/
+docs/fanqie-api.md
+docs/login-plan.md

@@ -51,10 +51,10 @@ function router() {
   const isPageMode = isReader && getReadMode() === 'page';
   const hasSearchQuery = path === 'search' && query.q;
   const showSearch = path === 'search' || path === 'shelf';
-  const showBottomNav = showSearch && !isPageMode;
+  const showBottomNav = (showSearch || path === 'profile') && !isPageMode;
 
   // Track which top-level tab the user was on before going deeper
-  if (path === 'search' || path === 'shelf') {
+  if (path === 'search' || path === 'shelf' || path === 'profile') {
     lastTopTab = path;
   }
   const header = document.querySelector('.header');
@@ -104,6 +104,8 @@ route('search', (q, app) => {
 });
 
 route('shelf', (q, app) => { const count = loadData().shelf.length; $('pageTitle').textContent = `我的书架 (${count})`; $('searchInput').value = ''; $('searchInput').placeholder = '搜索书架...'; updateClearBtn(); _shelfFilter = ''; renderShelf(app); });
+
+route('profile', (q, app) => { $('pageTitle').textContent = '我的'; renderProfile(app); });
 
 route('author', async (q, app) => {
   const authorId = q.author_id || '';
@@ -173,7 +175,7 @@ function applyFilters() {
 
 async function doSearch() {
   const hash = location.hash.slice(1)||'';
-  if (hash.startsWith('shelf')) { _shelfFilter = $('searchInput').value.trim(); renderShelf($('app')); return; }
+  if (hash.startsWith('shelf')) { _shelfFilter = $('searchInput').value.trim(); _applyShelfFilter(); return; }
   const key = $('searchInput').value.trim();
   if (!key) return;
   // Update URL so back button logic detects search results state
@@ -249,8 +251,8 @@ function filterSuggest(q) {
 function quickSearch(key) { $('searchInput').value = key; doSearch(); }
 function delHistory(key) { const data = loadData(); data.searchHistory = data.searchHistory.filter(s => s !== key); saveSearchHistory(data.searchHistory); showSuggest(); }
 
-function onSearchInput() { updateClearBtn(); const hash = location.hash.slice(1)||''; if (hash.startsWith('shelf')) { _shelfFilter = $('searchInput').value.trim(); renderShelf($('app')); } else { filterSuggest($('searchInput').value); } }
-function clearSearch() { $('searchInput').value = ''; updateClearBtn(); const hash = location.hash.slice(1)||''; if (hash.startsWith('shelf')) { _shelfFilter = ''; renderShelf($('app')); $('searchInput').focus(); } else { $('searchInput').focus(); showSuggest(); } }
+function onSearchInput() { updateClearBtn(); const hash = location.hash.slice(1)||''; if (hash.startsWith('shelf')) { _shelfFilter = $('searchInput').value.trim(); _applyShelfFilter(); } else { filterSuggest($('searchInput').value); } }
+function clearSearch() { $('searchInput').value = ''; updateClearBtn(); const hash = location.hash.slice(1)||''; if (hash.startsWith('shelf')) { _shelfFilter = ''; _applyShelfFilter(); $('searchInput').focus(); } else { $('searchInput').focus(); showSuggest(); } }
 function updateClearBtn() { $('searchClear').classList.toggle('visible', $('searchInput').value.length > 0); }
 
 // ====== Global event listeners ======
@@ -281,7 +283,10 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
 // ====== Init ======
 initTheme();
 renderTabs();
+_profileUser = getCachedUser();
+_onlineShelf = getCachedShelf();
 router();
+_tryAutoLogin();
 
 // Service Worker
 if ('serviceWorker' in navigator) {

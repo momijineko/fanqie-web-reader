@@ -29,9 +29,17 @@ function saveReaderProgress(bid, idx, chapterId, chapterTitle, total) {
   const data = loadData();
   data.readingHistory = { bookId: bid, name: (cache.detail[bid]||{}).bookName||'', chapterIdx: idx, chapterName: chapterTitle, totalChapters: total, updatedAt: Date.now() };
   saveReadingHistory(data.readingHistory);
+  saveBookProgress(bid, { chapterIdx: idx, chapterId: String(chapterId), chapterTitle, totalChapters: total, updatedAt: Date.now() });
   if (!data.stats.readSet) data.stats.readSet = [];
   const csid = String(chapterId);
   if (!data.stats.readSet.includes(csid)) { data.stats.readSet.push(csid); data.stats.chaptersRead = data.stats.readSet.length; saveStats(data.stats); }
+  if (_profileUser) {
+    fetch(`${API}/api/user/progress`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ book_id: bid, item_id: chapterId, index: idx }),
+    }).catch(() => {});
+  }
 }
 
 // ====== Reader state ======
@@ -108,8 +116,13 @@ function renderScrollReader(app, bid, idx) {
       <div class="settings-row">
         <span class="settings-label">字体</span>
         <div class="settings-chips">${FONTS.map(f=>`<button class="settings-chip${f.id===curFont?' active':''}" onclick="changeFont('${f.id}')">${f.name}</button>`).join('')}</div>
+        <label class="toggle-switch">
+          <input type="checkbox" ${isEink()?'checked':''} onchange="toggleEink()">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="settings-value">E-INK</span>
       </div>
-      <div class="settings-row">
+      <div class="settings-row bg-swatches-row">
         <span class="settings-label">背景</span>
         <div class="bg-swatches">
           <button class="bg-swatch swatch-default${dt==='default'?' active':''}" onclick="applyThemeFrom(event,'default')"><div class="mini-lines"><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div></button>
@@ -118,7 +131,7 @@ function renderScrollReader(app, bid, idx) {
           <button class="bg-swatch swatch-dark${dt==='dark'?' active':''}" onclick="applyThemeFrom(event,'dark')"><div class="mini-lines"><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div></button>
         </div>
       </div>
-      <div class="settings-row">
+      <div class="settings-row bg-mode-row">
         <span class="settings-label">模式</span>
         <div class="settings-chips">
           ${READ_MODES.map(m => `<button class="settings-chip${curMode===m.id?' active':''}" onclick="switchReadMode('${m.id}')">${m.label}</button>`).join('')}
@@ -286,8 +299,13 @@ function renderPageReader(app, bid, idx) {
             <div class="settings-row">
               <span class="settings-label">字体</span>
               <div class="settings-chips">${FONTS.map(f=>`<button class="settings-chip${f.id===curFont?' active':''}" onclick="changeFont('${f.id}');pgCalcDelayed()">${f.name}</button>`).join('')}</div>
+              <label class="toggle-switch">
+                <input type="checkbox" ${isEink()?'checked':''} onchange="toggleEink()">
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="settings-value">E-INK</span>
             </div>
-            <div class="settings-row">
+            <div class="settings-row bg-swatches-row">
               <span class="settings-label">背景</span>
               <div class="bg-swatches">
                 <button class="bg-swatch swatch-default${dt==='default'?' active':''}" onclick="applyThemeFrom(event,'default')"><div class="mini-lines"><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div></button>
@@ -296,7 +314,7 @@ function renderPageReader(app, bid, idx) {
                 <button class="bg-swatch swatch-dark${dt==='dark'?' active':''}" onclick="applyThemeFrom(event,'dark')"><div class="mini-lines"><div class="mini-line"></div><div class="mini-line"></div><div class="mini-line"></div></div></button>
               </div>
             </div>
-            <div class="settings-row">
+            <div class="settings-row bg-mode-row">
               <span class="settings-label">模式</span>
               <div class="settings-chips">
                 ${READ_MODES.map(m => `<button class="settings-chip${curMode===m.id?' active':''}" onclick="switchReadMode('${m.id}')">${m.label}</button>`).join('')}
@@ -768,6 +786,7 @@ function setupPgGestures() {
   }, { passive: true });
   
   container.addEventListener('touchend', e => {
+    // E-ink: vertical swipe → page turn; horizontal → original handler
     if (!pg.swipeActive) return;
     pg.swipeActive = false;
     
