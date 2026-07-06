@@ -35,6 +35,8 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy application files
 COPY server.py .
+COPY shared.py .
+COPY routers/ ./routers/
 COPY charset.json .
 COPY font_decoder.py .
 COPY static/ ./static/
