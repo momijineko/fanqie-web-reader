@@ -189,12 +189,12 @@ function toggleEink() {
     document.body.classList.remove('theme-eink');
     localStorage.setItem('einkMode', 'off');
     initTheme();
-    setReadMode('page');
+    switchReadMode('page');
   } else {
     document.body.classList.remove('theme-default', 'theme-sepia', 'theme-green', 'theme-dark', 'theme-eink');
     document.body.classList.add('theme-eink');
     localStorage.setItem('einkMode', 'on');
-    setReadMode('no-anim');
+    switchReadMode('no-anim');
     if (!_einkScrollInited) { _einkScrollInited = true; _initEinkScroll(); }
   }
   const el = $('app').firstElementChild;
