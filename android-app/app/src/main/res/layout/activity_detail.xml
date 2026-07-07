@@ -83,7 +83,7 @@
                                 android:textSize="@dimen/fs_xs"
                                 android:textColor="@color/accent"
                                 android:background="@color/accent_light"
-                                android:padding="2dp 8dp"
+                                android:paddingVertical="2dp" android:paddingHorizontal="8dp"
                                 android:layout_marginEnd="@dimen/sp_2" />
 
                             <TextView

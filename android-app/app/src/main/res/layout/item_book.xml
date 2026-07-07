@@ -54,7 +54,7 @@
                     android:layout_height="wrap_content"
                     android:textSize="@dimen/fs_xs"
                     android:layout_marginStart="@dimen/sp_1"
-                    android:padding="1dp 5dp"
+                    android:paddingVertical="1dp" android:paddingHorizontal="5dp"
                     android:visibility="gone" />
             </LinearLayout>
 
@@ -88,7 +88,7 @@
                 android:textSize="@dimen/fs_xs"
                 android:textColor="@color/accent"
                 android:background="@color/accent_light"
-                android:padding="1dp 6dp"
+                android:paddingVertical="1dp" android:paddingHorizontal="6dp"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>

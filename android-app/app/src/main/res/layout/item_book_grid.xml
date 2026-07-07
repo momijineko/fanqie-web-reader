@@ -32,7 +32,7 @@
             android:textStyle="bold"
             android:textColor="@color/white"
             android:background="#E6E67E22"
-            android:padding="2dp 6dp"
+            android:paddingVertical="2dp" android:paddingHorizontal="6dp"
             android:visibility="gone" />
     </com.google.android.material.card.MaterialCardView>
 
