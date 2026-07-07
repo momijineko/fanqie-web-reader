@@ -25,7 +25,7 @@ class BookAdapter(
         notifyDataSetChanged()
     }
 
-    override fun getItemViewType(): Int = mode.ordinal
+    override fun getItemViewType(position: Int): Int = mode.ordinal
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         return if (viewType == Mode.GRID.ordinal) {

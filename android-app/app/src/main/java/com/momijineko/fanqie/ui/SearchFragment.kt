@@ -5,13 +5,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.snackbar.Snackbar
 import com.momijineko.fanqie.App
-import com.momijineko.fanqie.data.db.BookEntity
 import com.momijineko.fanqie.databinding.FragmentSearchBinding
 import com.momijineko.fanqie.util.EinkUtils
 import kotlinx.coroutines.launch
