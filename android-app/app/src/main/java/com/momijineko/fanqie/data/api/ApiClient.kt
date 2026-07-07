@@ -4,6 +4,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -22,8 +23,7 @@ class ApiClient(private val baseUrl: String) {
     private fun url(path: String) = baseUrl.trimEnd('/') + path
 
     private fun buildUrl(path: String, params: Map<String, String> = emptyMap()): okhttp3.HttpUrl {
-        val builder = okhttp3.HttpUrl.parse(url(path))?.newBuilder()
-            ?: throw IllegalArgumentException("Invalid URL: ${url(path)}")
+        val builder = url(path).toHttpUrl().newBuilder()
         params.forEach { (k, v) -> builder.addQueryParameter(k, v) }
         return builder.build()
     }
