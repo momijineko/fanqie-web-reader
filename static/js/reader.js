@@ -778,8 +778,9 @@ function setupPgGestures() {
       dragCurrentPage.style.transition = 'none';
       dragCurrentPage.style.transform = `translateX(${dx}px)`;
       const cw = container.clientWidth;
-      const prev = $('pageViewport')?.querySelector(`.page-page[data-page="${pg.curPage - 1}"]`);
-      const next = $('pageViewport')?.querySelector(`.page-page[data-page="${pg.curPage + 1}"]`);
+      var _vp = $('pageViewport');
+      var prev = _vp ? _vp.querySelector('.page-page[data-page="' + (pg.curPage - 1) + '"]') : null;
+      var next = _vp ? _vp.querySelector('.page-page[data-page="' + (pg.curPage + 1) + '"]') : null;
       if (prev && prev.style.display !== 'none') { prev.style.transition = 'none'; prev.style.transform = `translateX(${-cw + dx}px)`; }
       if (next && next.style.display !== 'none') { next.style.transition = 'none'; next.style.transform = `translateX(${cw + dx}px)`; }
     }
