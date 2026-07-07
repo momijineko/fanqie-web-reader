@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Spacing scale (from web version) -->
+    <dimen name="sp_1">4dp</dimen>
+    <dimen name="sp_2">8dp</dimen>
+    <dimen name="sp_3">12dp</dimen>
+    <dimen name="sp_4">16dp</dimen>
+    <dimen name="sp_5">20dp</dimen>
+    <dimen name="sp_6">24dp</dimen>
+    <dimen name="sp_8">32dp</dimen>
+
+    <!-- Radius scale -->
+    <dimen name="radius_sm">8dp</dimen>
+    <dimen name="radius_md">12dp</dimen>
+    <dimen name="radius_lg">16dp</dimen>
+    <dimen name="radius_xl">20dp</dimen>
+    <dimen name="radius_pill">999dp</dimen>
+
+    <!-- Book cover sizes -->
+    <dimen name="cover_list_w">72dp</dimen>
+    <dimen name="cover_list_h">100dp</dimen>
+    <dimen name="cover_detail_w">110dp</dimen>
+    <dimen name="cover_detail_h">150dp</dimen>
+
+    <!-- Bottom nav -->
+    <dimen name="bottom_nav_h">56dp</dimen>
+
+    <!-- Text sizes -->
+    <dimen name="fs_xs">11sp</dimen>
+    <dimen name="fs_sm">12sp</dimen>
+    <dimen name="fs_base">14sp</dimen>
+    <dimen name="fs_md">15sp</dimen>
+    <dimen name="fs_lg">17sp</dimen>
+    <dimen name="fs_xl">20sp</dimen>
+    <dimen name="fs_2xl">24sp</dimen>
+</resources>

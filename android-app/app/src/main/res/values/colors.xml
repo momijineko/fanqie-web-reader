@@ -1,7 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Primary palette (from web version) -->
+    <color name="accent">#E8722A</color>
+    <color name="accent_hover">#C85D1E</color>
+    <color name="accent_light">#1AE8722A</color>
+    <color name="accent_container">#FFF3EB</color>
+
+    <!-- Surfaces -->
+    <color name="bg">#F0EEEA</color>
+    <color name="card_bg">#FFFFFF</color>
+    <color name="reader_bg">#F7F5F0</color>
+    <color name="badge_bg">#ECEAE4</color>
+
+    <!-- Text -->
+    <color name="text_primary">#2C2C2C</color>
+    <color name="text_secondary">#6B6B6B</color>
+    <color name="text_muted">#767676</color>
+
+    <!-- Borders -->
+    <color name="border">#E5E2DC</color>
+
+    <!-- Status badges -->
+    <color name="status_ongoing">#E67E22</color>
+    <color name="status_ongoing_bg">#1AE67E22</color>
+    <color name="status_finished">#27AE60</color>
+    <color name="status_finished_bg">#1A27AE60</color>
+
+    <!-- Author speak -->
+    <color name="author_bg">#FEF9E7</color>
+    <color name="author_border">#F0E4A6</color>
+    <color name="author_text">#7D6608</color>
+
+    <!-- Common -->
     <color name="black">#000000</color>
     <color name="white">#FFFFFF</color>
-    <color name="gray_light">#EEEEEE</color>
-    <color name="gray">#888888</color>
+    <color name="transparent">#00000000</color>
 </resources>

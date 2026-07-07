@@ -2,33 +2,57 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@color/bg">
 
-    <LinearLayout
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp">
-        <EditText
-            android:id="@+id/et_search"
-            android:layout_width="0dp"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="1dp"
+        app:cardBackgroundColor="@color/card_bg"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="搜索书名、作者..."
-            android:inputType="text"
-            android:imeOptions="actionSearch" />
-        <Button
-            android:id="@+id/btn_search"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="搜索" />
-    </LinearLayout>
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="@dimen/sp_2">
+
+            <EditText
+                android:id="@+id/et_search"
+                android:layout_width="0dp"
+                android:layout_height="40dp"
+                android:layout_weight="1"
+                android:hint="搜索书名、作者..."
+                android:inputType="text"
+                android:imeOptions="actionSearch"
+                android:background="@drawable/bg_search_bar"
+                android:paddingStart="@dimen/sp_4"
+                android:paddingEnd="@dimen/sp_4"
+                android:textSize="@dimen/fs_base"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_muted"
+                android:maxLines="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_search"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="@dimen/sp_2"
+                android:text="搜索"
+                style="@style/Widget.Fanqie.Button.Primary" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
     <ProgressBar
         android:id="@+id/progress_bar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_marginTop="@dimen/sp_8"
         android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -36,6 +60,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp" />
+        android:clipToPadding="false"
+        android:padding="@dimen/sp_3"
+        android:scrollbars="none" />
 
 </LinearLayout>

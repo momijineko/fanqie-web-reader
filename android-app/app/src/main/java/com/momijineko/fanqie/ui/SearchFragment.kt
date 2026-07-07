@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 class SearchFragment : Fragment() {
     private var _binding: FragmentSearchBinding? = null
     private val binding get() = _binding!!
-    private val adapter = BookAdapter { book -> openDetail(book.bookId) }
+    private val adapter = BookAdapter({ book -> openDetail(book.bookId) }, BookAdapter.Mode.LIST)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSearchBinding.inflate(inflater, container, false)
@@ -28,7 +28,7 @@ class SearchFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.rvBooks.layoutManager = GridLayoutManager(requireContext(), 3)
+        binding.rvBooks.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(requireContext())
         binding.rvBooks.adapter = adapter
         EinkUtils.disableRecyclerViewAnimation(binding.rvBooks)
 

@@ -2,25 +2,35 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:background="@color/bg"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="8dp">
+        android:gravity="center_vertical"
+        android:padding="@dimen/sp_2"
+        android:background="@color/card_bg"
+        android:elevation="1dp">
+
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="我的书架"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-        <Button
+            android:textSize="@dimen/fs_lg"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:layout_marginStart="@dimen/sp_2" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_refresh"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="刷新" />
+            android:layout_height="36dp"
+            android:text="刷新"
+            style="@style/Widget.Fanqie.Button.Outlined" />
     </LinearLayout>
 
     <ProgressBar
@@ -28,6 +38,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
+        android:layout_marginTop="@dimen/sp_8"
         android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView
@@ -35,6 +46,8 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:padding="8dp" />
+        android:clipToPadding="false"
+        android:padding="@dimen/sp_3"
+        android:scrollbars="none" />
 
 </LinearLayout>

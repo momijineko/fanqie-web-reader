@@ -2,7 +2,8 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="@color/bg">
 
     <FrameLayout
         android:id="@+id/fragment_container"
@@ -19,9 +20,11 @@
         android:layout_height="wrap_content"
         app:menu="@menu/bottom_nav"
         app:labelVisibilityMode="labeled"
-        android:background="@android:color/white"
-        app:itemTextColor="@android:color/black"
-        app:itemIconTint="@android:color/black"
+        android:background="@color/card_bg"
+        app:itemTextColor="@color/nav_item_color"
+        app:itemIconTint="@color/nav_item_color"
+        app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
+        android:minHeight="@dimen/bottom_nav_h"
         app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

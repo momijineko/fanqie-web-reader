@@ -2,20 +2,21 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:background="@color/reader_bg">
 
     <ScrollView
         android:id="@+id/scroll_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:fillViewport="true"
         android:visibility="gone">
 
         <TextView
             android:id="@+id/tv_scroll_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="24dp"
-            android:textColor="#000000"
+            android:padding="@dimen/sp_5"
+            android:textColor="@color/text_primary"
             android:visibility="visible" />
 
     </ScrollView>
@@ -24,64 +25,98 @@
         android:id="@+id/tv_page_text"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="24dp"
-        android:textColor="#000000"
+        android:padding="@dimen/sp_5"
+        android:textColor="@color/text_primary"
         android:visibility="gone" />
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="#FFFFFF">
+        android:orientation="vertical"
+        android:background="@color/reader_bg">
 
-        <Button
-            android:id="@+id/btn_prev"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="上一章" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/border" />
 
-        <TextView
-            android:id="@+id/tv_chapter_title"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_gravity="center_vertical"
-            android:gravity="center"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:maxLines="1"
-            android:ellipsize="middle" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="@dimen/sp_2">
 
-        <Button
-            android:id="@+id/btn_next"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="下一章" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_prev"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="上一章"
+                android:textSize="@dimen/fs_sm"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+
+            <TextView
+                android:id="@+id/tv_chapter_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:textSize="@dimen/fs_sm"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:maxLines="1"
+                android:ellipsize="middle"
+                android:layout_marginStart="@dimen/sp_2"
+                android:layout_marginEnd="@dimen/sp_2" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_next"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="下一章"
+                android:textSize="@dimen/fs_sm"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:orientation="horizontal"
-        android:padding="8dp"
-        android:background="#FFFFFF">
+        android:orientation="vertical">
 
-        <Button
-            android:id="@+id/btn_settings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="设置" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/border" />
 
-        <TextView
-            android:id="@+id/tv_page_info"
-            android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:textSize="12sp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="@dimen/sp_2"
+            android:background="@color/reader_bg">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="设置"
+                android:textSize="@dimen/fs_sm"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+
+            <TextView
+                android:id="@+id/tv_page_info"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center"
+                android:textSize="@dimen/fs_xs"
+                android:textColor="@color/text_muted"
+                android:layout_marginStart="@dimen/sp_2" />
+        </LinearLayout>
     </LinearLayout>
 
 </FrameLayout>

@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 class ShelfFragment : Fragment() {
     private var _binding: FragmentShelfBinding? = null
     private val binding get() = _binding!!
-    private val adapter = BookAdapter { book -> openDetail(book.bookId) }
+    private val adapter = BookAdapter({ book -> openDetail(book.bookId) }, BookAdapter.Mode.GRID)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentShelfBinding.inflate(inflater, container, false)
