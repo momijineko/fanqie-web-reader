@@ -27,7 +27,7 @@
         <item name="cornerRadius">@dimen/radius_pill</item>
         <item name="backgroundTint">@color/accent</item>
         <item name="android:textColor">@color/white</item>
-        <item name="android:textSize">@dimen/fs_md</dimen>
+        <item name="android:textSize">@dimen/fs_md</item>
         <item name="android:textStyle">bold</item>
     </style>
 
