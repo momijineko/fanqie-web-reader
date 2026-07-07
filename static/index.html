@@ -12,8 +12,7 @@
 <link rel="stylesheet" href="/static/css/components.css">
 <link rel="manifest" href="/static/manifest.json">
 <meta name="theme-color" content="#e8722a">
-<script src="https://unpkg.com/lucide@0.263.1"></script>
-<script>if(typeof lucide==='undefined'){var s=document.createElement('script');s.src='https://unpkg.com/lucide@0.216.0';s.onload=function(){lucide.createIcons()};document.head.appendChild(s)}</script>
+<script src="https://unpkg.com/lucide@0.525.0"></script>
 </head>
 <body>
 
@@ -25,7 +24,7 @@
   </div>
   <img id="imgViewerContent" src="" alt="" draggable="false">
 </div>
-<div class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:isEink()?'auto':'smooth'})"><i data-lucide="arrow-up" width="18" height="18"></i></div>
+<div class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:isEink()?'instant':'smooth'})"><i data-lucide="arrow-up" width="18" height="18"></i></div>
 
 <div class="header">
   <div class="header-top">
@@ -63,7 +62,7 @@
 <script src="/static/js/views.js"></script>
 <script src="/static/js/reader.js"></script>
 <script src="/static/js/main.js"></script>
-<script>if(typeof lucide!=='undefined')lucide.createIcons();</script>
+<script>lucide.createIcons();</script>
 <script>
 (function(){
   if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;

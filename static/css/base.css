@@ -147,9 +147,7 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-rect { border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 .skel-cover { width: 72px; height: 100px; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; }
 .skel-cover-lg { width: 110px; height: 150px; border-radius: var(--radius); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; }
-.skel-cover-shelf { width: 100%; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-@supports not (aspect-ratio: 1) { .skel-cover-shelf { height: 0; padding-bottom: 133.33%; } }
-@supports (aspect-ratio: 1) { .skel-cover-shelf { aspect-ratio: 3/4; } }
+.skel-cover-shelf { aspect-ratio: 3/4; width: 100%; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
 /* Skeleton list container */
 .skeleton-list { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
@@ -185,7 +183,7 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-discover-card::after { content: '›'; font-size: 22px; opacity: 0.4; font-weight: 700; color: #fff; }
 
 .skel-discover-tip { width: 100%; background: var(--accent-light); border-radius: var(--radius); padding: var(--sp-4); margin-top: var(--sp-8); display: flex; align-items: center; justify-content: center; }
-.skel-discover-tip .skel-line { height: 14px; background: var(--accent-light); background: color-mix(in srgb, var(--accent) 20%, transparent); background-size: 200% 100%; }
+.skel-discover-tip .skel-line { height: 14px; background: color-mix(in srgb, var(--accent) 20%, transparent); background-size: 200% 100%; }
 
 /* 3. Book Card */
 .skeleton-card { display: flex; gap: 12px; background: var(--card-bg); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
@@ -214,7 +212,7 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 /* 5. Description Section */
 .skel-detail-desc { display: flex; flex-direction: column; gap: 10px; padding: 0 var(--sp-5) var(--sp-4); background: var(--card-bg); border-radius: var(--radius-md); margin-top: 12px; box-shadow: var(--shadow); }
 .skel-detail-desc-toggle { display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 0 0 var(--radius-md) var(--radius-md); margin-top: -2px; padding: var(--sp-2) var(--sp-5) var(--sp-3); min-height: 44px; }
-.skel-detail-desc-toggle .skel-line { background: var(--accent-light); background: color-mix(in srgb, var(--accent) 20%, transparent); background-size: 200% 100%; }
+.skel-detail-desc-toggle .skel-line { background: color-mix(in srgb, var(--accent) 20%, transparent); background-size: 200% 100%; }
 
 /* 6. Chapter List */
 .skel-chapter-section { background: var(--card-bg); border-radius: var(--radius-md); margin-top: var(--sp-3); box-shadow: var(--shadow); overflow: hidden; }
@@ -229,7 +227,7 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 
 /* 7. Detail Sticky Bottom */
 .skel-detail-sticky-spacer { height: calc(64px + env(safe-area-inset-bottom)); }
-.skel-detail-sticky { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card-bg); background: color-mix(in srgb, var(--card-bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); z-index: 50; max-width: 720px; margin: 0 auto; box-shadow: 0 -4px 16px rgba(0,0,0,0.06); }
+.skel-detail-sticky { position: fixed; bottom: 0; left: 0; right: 0; background: color-mix(in srgb, var(--card-bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); z-index: 50; max-width: 720px; margin: 0 auto; box-shadow: 0 -4px 16px rgba(0,0,0,0.06); }
 .skel-detail-sticky .skel-pill { height: 44px; }
 
 /* 8. Author Page Header */
@@ -260,9 +258,7 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-shelf { margin-top: 20px; }
 .skel-shelf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px 0; }
 .skel-shelf-item { display: flex; flex-direction: column; gap: 8px; }
-.skel-shelf-cover { width: 100%; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-@supports not (aspect-ratio: 1) { .skel-shelf-cover { height: 0; padding-bottom: 133.33%; } }
-@supports (aspect-ratio: 1) { .skel-shelf-cover { aspect-ratio: 3/4; } }
+.skel-shelf-cover { aspect-ratio: 3/4; width: 100%; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 .skel-shelf-name { width: auto; flex: 1; height: 12px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 .skel-shelf-progress { width: 40%; height: 8px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
