@@ -63,12 +63,12 @@
     </style>
 
     <style name="TextAppearance.Fanqie.BodySecondary" parent="TextAppearance.Material3.BodySmall">
-        <item name="android:textSize">@dimen/fs_sm</dimen>
+        <item name="android:textSize">@dimen/fs_sm</item>
         <item name="android:textColor">@color/text_secondary</item>
     </style>
 
     <style name="TextAppearance.Fanqie.Caption" parent="TextAppearance.Material3.LabelSmall">
-        <item name="android:textSize">@dimen/fs_xs</dimen>
+        <item name="android:textSize">@dimen/fs_xs</item>
         <item name="android:textColor">@color/text_muted</item>
     </style>
 </resources>
