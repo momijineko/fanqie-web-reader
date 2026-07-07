@@ -739,12 +739,8 @@ async function _tryAutoLogin() {
       _profileUser = data.data;
       saveCachedUser(_profileUser);
       _autoLoginPending = false;
-      if (wasLoggedIn) {
-        _loadOnlineShelf();
-      } else {
-        await _loadOnlineShelf();
-        router();
-      }
+      await _loadOnlineShelf();
+      router();
       return;
     }
   } catch(e) {}

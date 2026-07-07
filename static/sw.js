@@ -1,10 +1,8 @@
-const CACHE_NAME = 'fanqie-v3';
+const CACHE_NAME = 'fanqie-4';
 const IMG_CACHE = 'fanqie-imgs';
 const STATIC_ASSETS = [
   '/',
   '/static/index.html',
-  '/static/css/style.css',
-  '/static/js/app.js',
   '/static/manifest.json',
 ];
 

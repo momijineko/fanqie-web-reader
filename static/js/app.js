@@ -73,9 +73,16 @@ function getTheme() { return localStorage.getItem('readerTheme') || 'auto'; }
 function initTheme() {
   if (isEink()) {
     document.body.classList.add('theme-eink');
-    setReadMode('no-anim');
+    if (getReadMode() !== 'no-anim') {
+      localStorage.setItem('readModeBeforeEink', getReadMode());
+      setReadMode('no-anim');
+    }
     _initEinkScroll();
     return;
+  }
+  if (localStorage.getItem('readModeBeforeEink')) {
+    setReadMode(localStorage.getItem('readModeBeforeEink'));
+    localStorage.removeItem('readModeBeforeEink');
   }
   const saved = getTheme();
   if (saved === 'auto') applyTheme('auto');
@@ -186,19 +193,12 @@ function toggleTheme(e) {
 function isEink() { return localStorage.getItem('einkMode') === 'on'; }
 function toggleEink() {
   if (isEink()) {
-    document.body.classList.remove('theme-eink');
     localStorage.setItem('einkMode', 'off');
-    initTheme();
-    switchReadMode('page');
   } else {
-    document.body.classList.remove('theme-default', 'theme-sepia', 'theme-green', 'theme-dark', 'theme-eink');
-    document.body.classList.add('theme-eink');
     localStorage.setItem('einkMode', 'on');
-    switchReadMode('no-anim');
-    if (!_einkScrollInited) { _einkScrollInited = true; _initEinkScroll(); }
+    localStorage.setItem('readModeBeforeEink', getReadMode());
   }
-  const el = $('app').firstElementChild;
-  if (el && el.classList.contains('profile-page')) renderProfile($('app'));
+  location.reload();
 }
 
 // ---- Font family ----

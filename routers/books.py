@@ -25,9 +25,9 @@ async def version():
             ["git", "describe", "--tags", "--abbrev=0"],
             stderr=subprocess.DEVNULL, timeout=3
         ).decode().strip()
-        return {"version": f"v{tag}"}
+        return {"version": tag}
     except Exception:
-        return {"version": "v0.0.0-dev"}
+        return {"version": "0.0.0-dev"}
 
 
 @router.get("/")
