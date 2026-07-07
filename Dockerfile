@@ -25,6 +25,12 @@ FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
+# Install runtime libraries for lxml
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxml2 \
+    libxslt1.1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Create non-root user for security
 RUN groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser
@@ -52,7 +58,7 @@ EXPOSE 8199
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8199/', timeout=5)" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8199/api/health', timeout=5)" || exit 1
 
 # Run uvicorn directly for proper signal handling
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8199"]

@@ -1,5 +1,7 @@
 import re
 import time
+from collections import OrderedDict
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Query
@@ -11,12 +13,14 @@ router = APIRouter()
 
 _CONTENT_TTL = 300
 _DETAIL_TTL = 3600
-_cache: dict[str, tuple[float, Any]] = {}
+_CACHE_MAX = 500
+_cache: OrderedDict[str, tuple[float, Any]] = OrderedDict()
 
 
 def _cache_get(key: str, ttl: float) -> Any | None:
     entry = _cache.get(key)
     if entry and time.time() - entry[0] < ttl:
+        _cache.move_to_end(key)
         return entry[1]
     if entry:
         _cache.pop(key, None)
@@ -25,6 +29,26 @@ def _cache_get(key: str, ttl: float) -> Any | None:
 
 def _cache_set(key: str, value: Any) -> None:
     _cache[key] = (time.time(), value)
+    _cache.move_to_end(key)
+    while len(_cache) > _CACHE_MAX:
+        _cache.popitem(last=False)
+
+
+@router.get("/sw.js")
+async def sw_js():
+    path = Path("static/sw.js")
+    if path.exists():
+        return FileResponse(
+            path,
+            media_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/"},
+        )
+    return JSONResponse(status_code=404, content={"error": "not found"})
+
+
+@router.get("/api/health")
+async def health():
+    return {"status": "ok", "version": resolve_version()}
 
 
 @router.get("/api/version")

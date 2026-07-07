@@ -35,8 +35,8 @@ async function fetchDetail(bid) {
   const p = (async () => {
     try {
       const [dr, cr] = await Promise.all([
-        fetch(`${API}/api/detail?book_id=${bid}`),
-        fetch(`${API}/api/chapters?book_id=${bid}`),
+        fetchWithTimeout(`${API}/api/detail?book_id=${bid}`),
+        fetchWithTimeout(`${API}/api/chapters?book_id=${bid}`),
       ]);
       const dd = await dr.json(), cd = await cr.json();
       const detail = dd.code===200 ? dd.data : null;
@@ -59,11 +59,15 @@ async function fetchDetail(bid) {
 }
 
 async function fetchContent(chapterId) {
-  if (getContentCache(chapterId)) return;
+  if (cache.content.has(chapterId)) return;
   if (inflight['c_'+chapterId]) return inflight['c_'+chapterId];
   const p = (async () => {
     try {
-      const r = await fetch(`${API}/api/content?chapter_id=${chapterId}`);
+      const idbVal = await idbGet(chapterId);
+      if (idbVal) { setContentCache(chapterId, idbVal); return; }
+    } catch(e) {}
+    try {
+      const r = await fetchWithTimeout(`${API}/api/content?chapter_id=${chapterId}`);
       const data = await r.json();
       if (data.code===200) setContentCache(chapterId, { paragraphs: data.data.Paragraphs||[], authorSpeak: data.data.AuthorSpeak||'' });
       else setContentCache(chapterId, { paragraphs: [], authorSpeak: '' });
@@ -79,7 +83,7 @@ async function fetchComments(bid) {
   if (inflight['cm_'+bid]) return inflight['cm_'+bid];
   const p = (async () => {
     try {
-      const r = await fetch(`${API}/api/comments?book_id=${bid}&count=50`);
+      const r = await fetchWithTimeout(`${API}/api/comments?book_id=${bid}&count=50`);
       const data = await r.json();
       let list = [];
       if (data.code===200 && data.data) { const o = data.data.data || data.data; list = o.comment || o; if (!Array.isArray(list)) list = []; }
@@ -102,7 +106,7 @@ async function fetchParagraphCommentCounts(chapterId, bookId) {
     try {
       const body = { chapter_id: chapterId };
       if (bookId) body.book_id = bookId;
-      const r = await fetch(`${API}/api/paragraph_comment_counts`, {
+      const r = await fetchWithTimeout(`${API}/api/paragraph_comment_counts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -130,7 +134,7 @@ async function fetchParagraphComments(chapterId, paragraphIdx, bookId) {
   if (inflight[key]) return inflight[key];
   const p = (async () => {
     try {
-      const r = await fetch(`${API}/api/paragraph_comments`, {
+      const r = await fetchWithTimeout(`${API}/api/paragraph_comments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -188,7 +188,7 @@ async function doSearch() {
   saveTabData({ books: [], filtered: [], offset: 0, hasMore: false, sortBy: 'default', tagFilter: '' });
   hideSuggest(); addHistory(key); updateClearBtn(); renderResults();
   try {
-    const r = await fetch(`${API}/api/search?key=${encodeURIComponent(key)}&tab_type=${S.tab}`);
+    const r = await fetchWithTimeout(`${API}/api/search?key=${encodeURIComponent(key)}&tab_type=${S.tab}`);
     const data = await r.json();
     const td = getTabData();
     td.books = data.code===200 ? (data.data||[]) : [];
@@ -214,7 +214,7 @@ async function loadMore() {
   if (!td.hasMore) return;
   S.loading = true; td.offset += 10; renderResults();
   try {
-    const r = await fetch(`${API}/api/search?key=${encodeURIComponent(S.key)}&tab_type=${S.tab}&offset=${td.offset}`);
+    const r = await fetchWithTimeout(`${API}/api/search?key=${encodeURIComponent(S.key)}&tab_type=${S.tab}&offset=${td.offset}`);
     const data = await r.json();
     const more = data.code===200 ? (data.data||[]) : [];
     td.books = td.books.concat(more);
@@ -290,5 +290,5 @@ _tryAutoLogin();
 
 // Service Worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/sw.js', {scope: '/'}).catch(() => {});
 }

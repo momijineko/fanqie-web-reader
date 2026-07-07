@@ -17,6 +17,13 @@ const FONTS = [
 
 function $(id) { return document.getElementById(id); }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+function escapeAttr(s) { return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function safeImgUrl(u) { const s = String(u||''); return /^https?:\/\//i.test(s) ? escapeAttr(s) : ''; }
+function fetchWithTimeout(url, opts = {}, ms = 15000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { ...opts, signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
 
 // ---- IndexedDB ----
 let dbInstance = null;

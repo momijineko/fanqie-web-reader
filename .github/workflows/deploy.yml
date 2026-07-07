@@ -172,7 +172,7 @@ on:
             # ===== STEP 6: Verify =====
             echo "=== Final ==="
             docker compose ps
-            curl -s -o /dev/null -w "Web reader HTTP %{http_code}\n" http://127.0.0.1:8199/ || echo "Web reader not ready"
+            curl -s -o /dev/null -w "Web reader HTTP %{http_code}\n" http://127.0.0.1:8199/api/health || echo "Web reader not ready"
             UNIDBG_FINAL=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8099/api/fq-signature/test 2>/dev/null || echo "000")
             echo "Unidbg HTTP $UNIDBG_FINAL"
             free -h

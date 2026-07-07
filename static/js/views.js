@@ -1208,7 +1208,7 @@ function renderCommentItems(list) {
     const imgs = c.images || [];
     const reply = c.reply_list || c.reply_comment || c.child_comments || null;
     const avatarHtml = avatar
-      ? `<img class="comment-avatar" src="${avatar}" alt="" loading="lazy" onerror="this.style.display='none'">`
+      ? `<img class="comment-avatar" src="${safeImgUrl(avatar)}" alt="" loading="lazy" onerror="this.style.display='none'">`
       : `<div class="comment-avatar comment-avatar-placeholder">${escapeHtml((user||'匿')[0])}</div>`;
     html += `<div class="comment-item">${avatarHtml}<div class="comment-body">`;
     html += `<div class="comment-user">${escapeHtml(user)}</div>`;
@@ -1217,7 +1217,7 @@ function renderCommentItems(list) {
       const imgGridClass = imgs.length === 1 ? 'comment-images single-img' : 'comment-images';
       html += `<div class="${imgGridClass}">`;
       for (const src of imgs) {
-        html += `<img class="comment-img" src="${escapeHtml(src)}" alt="评论图片" loading="lazy" onclick="openImageViewer(this.src)">`;
+        html += `<img class="comment-img" src="${safeImgUrl(src)}" alt="评论图片" loading="lazy" onclick="openImageViewer(this.src)">`;
       }
       html += '</div>';
     }
@@ -1232,7 +1232,7 @@ function renderCommentItems(list) {
         const rcUser = rc.user_name || (rc.user_info && rc.user_info.user_name) || rc.nick_name || '匿名';
         const rcAvatar = rc.avatar_url || (rc.user_info && (rc.user_info.user_avatar || rc.user_info.avatar_url)) || '';
         const rcAvatarHtml = rcAvatar
-          ? `<img class="comment-avatar comment-avatar-sm" src="${rcAvatar}" alt="" loading="lazy" onerror="this.style.display='none'">`
+          ? `<img class="comment-avatar comment-avatar-sm" src="${safeImgUrl(rcAvatar)}" alt="" loading="lazy" onerror="this.style.display='none'">`
           : `<div class="comment-avatar comment-avatar-sm comment-avatar-placeholder">${escapeHtml((rcUser||'匿')[0])}</div>`;
         html += `<div class="comment-item">${rcAvatarHtml}<div class="comment-body"><div class="comment-user">${escapeHtml(rcUser)}</div><div class="comment-text">${escapeHtml(rc.content||rc.text||'')}</div></div></div>`;
       }

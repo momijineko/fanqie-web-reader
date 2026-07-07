@@ -1020,12 +1020,12 @@ async function loadParaCommentList(chapterId, paraIdx, bookId) {
       const digg = c.digg_count || 0;
       const imgs = c.images || [];
       const reply = c.reply_list || c.reply_comment || c.child_comments || null;
-      const avatarHtml = avatar ? `<img class="comment-avatar" src="${avatar}" alt="" loading="lazy">` : `<div class="comment-avatar comment-avatar-placeholder">${escapeHtml(user.charAt(0))}</div>`;
+      const avatarHtml = avatar ? `<img class="comment-avatar" src="${safeImgUrl(avatar)}" alt="" loading="lazy">` : `<div class="comment-avatar comment-avatar-placeholder">${escapeHtml(user.charAt(0))}</div>`;
       html += `<div class="comment-item">${avatarHtml}<div class="comment-body"><div class="comment-user">${escapeHtml(user)}</div><div class="comment-text">${escapeHtml(text)}</div>`;
       if (imgs.length > 0) {
         const imgGridClass = imgs.length === 1 ? 'comment-images single-img' : 'comment-images';
         html += `<div class="${imgGridClass}">`;
-        for (const src of imgs) html += `<img class="comment-img" src="${src}" alt="评论图片" loading="lazy" onclick="openImageViewer(this.src)">`;
+        for (const src of imgs) html += `<img class="comment-img" src="${safeImgUrl(src)}" alt="评论图片" loading="lazy" onclick="openImageViewer(this.src)">`;
         html += '</div>';
       }
       const timeStr = time ? formatTime(time) : '';
@@ -1038,7 +1038,7 @@ async function loadParaCommentList(chapterId, paraIdx, bookId) {
         for (const rc of reply.slice(0,3)) {
           const rcAvatar = rc.avatar_url || '';
           const rcUser = rc.user_name || rc.nick_name || '匿名';
-          const rcAvatarHtml = rcAvatar ? `<img class="comment-avatar comment-avatar-sm" src="${rcAvatar}" alt="" loading="lazy">` : `<div class="comment-avatar comment-avatar-sm comment-avatar-placeholder">?</div>`;
+          const rcAvatarHtml = rcAvatar ? `<img class="comment-avatar comment-avatar-sm" src="${safeImgUrl(rcAvatar)}" alt="" loading="lazy">` : `<div class="comment-avatar comment-avatar-sm comment-avatar-placeholder">?</div>`;
           html += `<div class="comment-item">${rcAvatarHtml}<div class="comment-body"><div class="comment-user">${escapeHtml(rcUser)}</div><div class="comment-text">${escapeHtml(rc.content||rc.text||'')}</div></div></div>`;
         }
         html += '</div>';

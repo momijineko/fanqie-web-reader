@@ -30,7 +30,6 @@
 |---|---|
 | 后端 | Python 3.12 + FastAPI + Uvicorn |
 | HTTP 客户端 | httpx (async) |
-| 字体解析 | fontTools (ttLib) |
 | 前端 | 原生 HTML / CSS / JavaScript（无框架） |
 | 图标 | Lucide Icons (CDN) |
 | 样式 | CSS 自定义属性、Grid/Flexbox、View Transitions API |
@@ -150,7 +149,6 @@ fanqie-web-reader/
 - 番茄小说社区 API — 上游接口服务
 - [fqnovel-unidbg](https://github.com/mtongle/fqnovel-unidbg) — 段评接口签名代理
 - [FQToolBox](https://github.com/jackwd387/FQToolBox) — 作者信息接口参考
-- [fontTools](https://github.com/fonttools/fonttools) — 字体文件解析
 - [Lucide](https://lucide.dev/) — 图标库
 - [FastAPI](https://fastapi.tiangolo.com/) — 后端框架
 
