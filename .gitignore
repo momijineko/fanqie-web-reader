@@ -10,3 +10,9 @@ unidbg/unidbg-boot-server.jar
 unidbg/
 docs/fanqie-api.md
 docs/login-plan.md
+
+# 敏感配置与凭证
+user_cookie.json
+.env
+.env.*
+!.env.example

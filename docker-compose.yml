@@ -7,7 +7,7 @@ services:
       redis-server
       --bind 127.0.0.1
       --port 6379
-      --requirepass fanqie_unidbg_2026
+      --requirepass ${REDIS_PASSWORD:-fanqie_unidbg_2026}
       --maxmemory 64mb
       --maxmemory-policy allkeys-lru
       --save ""
@@ -23,6 +23,8 @@ services:
     environment:
       - PARA_COMMENT_MOCK=false
       - UNIDBG_API=http://127.0.0.1:8099
+      - COMMUNITY_API=${COMMUNITY_API:-http://101.35.133.34:5000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
     restart: unless-stopped
     depends_on:
       - redis

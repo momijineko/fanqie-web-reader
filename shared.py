@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -6,10 +7,43 @@ import httpx
 
 COOKIE_FILE = Path("user_cookie.json")
 
-COMMUNITY_API = "http://101.35.133.34:5000"
+COMMUNITY_API = os.environ.get("COMMUNITY_API", "http://101.35.133.34:5000")
 FANQIE_API = "https://api5-normal-sinfonlinec.fqnovel.com"
 UNIDBG_API = os.environ.get("UNIDBG_API", "http://127.0.0.1:8099")
 PARA_COMMENT_MOCK = os.environ.get("PARA_COMMENT_MOCK", "true").lower() in ("true", "1", "yes")
+
+logger = logging.getLogger("fanqie")
+
+_version_cache: str | None = None
+
+
+def resolve_version() -> str:
+    """启动后首次调用时通过 git describe 计算版本号并缓存，避免每次请求都 fork 子进程。"""
+    global _version_cache
+    if _version_cache is None:
+        try:
+            import subprocess
+            _version_cache = subprocess.check_output(
+                ["git", "describe", "--tags", "--abbrev=0"],
+                stderr=subprocess.DEVNULL, timeout=3,
+            ).decode().strip()
+        except Exception:
+            _version_cache = "0.0.0-dev"
+    return _version_cache
+
+
+def cors_origins() -> list[str]:
+    """解析 CORS_ORIGINS 环境变量；未设置时回退到本地常用端口。"""
+    raw = os.environ.get("CORS_ORIGINS", "").strip()
+    if not raw:
+        return [
+            "http://localhost:8080",
+            "http://127.0.0.1:8080",
+            "http://localhost:8199",
+            "http://127.0.0.1:8199",
+        ]
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
 
 client: httpx.AsyncClient = httpx.AsyncClient(
     timeout=30.0,
@@ -34,7 +68,7 @@ def load_cookie() -> dict:
         try:
             return json.loads(COOKIE_FILE.read_text("utf-8"))
         except Exception:
-            pass
+            logger.warning("cookie 文件读取失败，已忽略", exc_info=True)
     return {}
 
 

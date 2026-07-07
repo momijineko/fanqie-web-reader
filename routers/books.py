@@ -1,33 +1,35 @@
 import re
-import subprocess
-from pathlib import Path
+import time
+from typing import Any
 
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse, JSONResponse
 
-from shared import COMMUNITY_API, client
+from shared import COMMUNITY_API, client, logger, resolve_version
 
 router = APIRouter()
 
+_CONTENT_TTL = 300
+_DETAIL_TTL = 3600
+_cache: dict[str, tuple[float, Any]] = {}
 
-@router.get("/.well-known/assetlinks.json")
-async def assetlinks():
-    path = Path("static/.well-known/assetlinks.json")
-    if path.exists():
-        return FileResponse(path, media_type="application/json")
-    return JSONResponse(status_code=404, content={"error": "not found"})
+
+def _cache_get(key: str, ttl: float) -> Any | None:
+    entry = _cache.get(key)
+    if entry and time.time() - entry[0] < ttl:
+        return entry[1]
+    if entry:
+        _cache.pop(key, None)
+    return None
+
+
+def _cache_set(key: str, value: Any) -> None:
+    _cache[key] = (time.time(), value)
 
 
 @router.get("/api/version")
 async def version():
-    try:
-        tag = subprocess.check_output(
-            ["git", "describe", "--tags", "--abbrev=0"],
-            stderr=subprocess.DEVNULL, timeout=3
-        ).decode().strip()
-        return {"version": tag}
-    except Exception:
-        return {"version": "0.0.0-dev"}
+    return {"version": resolve_version()}
 
 
 @router.get("/")
@@ -47,14 +49,13 @@ async def search(key: str = Query(...), tab_type: int = 3, offset: int = 0):
             raw = data.get("data", {})
             if isinstance(raw, dict):
                 tabs = raw.get("search_tabs", [])
-                has_more = any(
-                    t.get("has_more") for t in tabs if isinstance(t, dict)
-                )
+                has_more = any(t.get("has_more") for t in tabs if isinstance(t, dict))
                 books = _extract_books_from_tabs(tabs)
                 if books:
                     return {"code": 200, "data": books, "has_more": has_more, "msg": "success"}
     except Exception as e:
-        print(f"DEBUG search ERROR: {e}")
+        logger.warning("search 上游请求失败: %s", e, exc_info=True)
+        return JSONResponse(status_code=502, content={"code": 502, "msg": f"upstream error: {type(e).__name__}", "data": []})
     return {"code": 200, "data": [], "msg": "no results"}
 
 
@@ -151,8 +152,8 @@ async def author_books(author_id: str = Query(...)):
             "msg": "success",
         }
     except Exception as e:
-        print(f"DEBUG author_books ERROR: {e}")
-    return {"code": 200, "data": [], "msg": "error"}
+        logger.warning("author_books 请求失败: %s", e, exc_info=True)
+        return JSONResponse(status_code=502, content={"code": 502, "msg": f"upstream error: {type(e).__name__}", "data": []})
 
 
 @router.get("/api/chapters")
@@ -168,7 +169,6 @@ async def chapters(book_id: str = Query(...)):
             inner = outer.get("data", {})
             ids = inner.get("allItemIds", [])
             vols = inner.get("chapterListWithVolume", [])
-            vol_names = inner.get("volumeNameList", [])
 
             result = []
             for vi, vol in enumerate(vols):
@@ -195,13 +195,19 @@ async def chapters(book_id: str = Query(...)):
             if ids:
                 result = [{"ChapterID": cid, "Name": f"第{i+1}章"} for i, cid in enumerate(ids)]
                 return {"code": 200, "data": result, "msg": "success", "total": len(result)}
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("chapters 上游请求失败 book_id=%s: %s", book_id, e, exc_info=True)
+        return JSONResponse(status_code=502, content={"code": 502, "msg": f"upstream error: {type(e).__name__}", "data": []})
     return {"code": 200, "data": [], "msg": "no chapters"}
 
 
 @router.get("/api/content")
 async def content(chapter_id: str = Query(...)):
+    cache_key = f"content:{chapter_id}"
+    cached = _cache_get(cache_key, _CONTENT_TTL)
+    if cached is not None:
+        return cached
+
     try:
         r = await client.get(
             f"{COMMUNITY_API}/api/raw_full",
@@ -223,7 +229,7 @@ async def content(chapter_id: str = Query(...)):
             if not paragraphs and content_html:
                 paragraphs = [l for l in content_html.split('\n') if l.strip()]
 
-            return {
+            result = {
                 "code": 200,
                 "data": {
                     "ChapterID": chapter_id,
@@ -233,6 +239,8 @@ async def content(chapter_id: str = Query(...)):
                 },
                 "msg": "success",
             }
+            _cache_set(cache_key, result)
+            return result
 
         r = await client.get(
             f"{COMMUNITY_API}/api/content",
@@ -243,7 +251,7 @@ async def content(chapter_id: str = Query(...)):
             text = data.get("data", {}).get("content", "")
             if text:
                 paragraphs = [l for l in text.split('\n') if l.strip()]
-                return {
+                result = {
                     "code": 200,
                     "data": {
                         "ChapterID": chapter_id,
@@ -252,17 +260,21 @@ async def content(chapter_id: str = Query(...)):
                     },
                     "msg": "success",
                 }
-    except Exception:
-        pass
+                _cache_set(cache_key, result)
+                return result
+    except Exception as e:
+        logger.warning("content 上游请求失败 chapter_id=%s: %s", chapter_id, e, exc_info=True)
+        return JSONResponse(status_code=502, content={"code": 502, "msg": f"upstream error: {type(e).__name__}"})
 
-    return JSONResponse(
-        status_code=503,
-        content={"code": 503, "msg": "Content unavailable"},
-    )
+    return JSONResponse(status_code=503, content={"code": 503, "msg": "Content unavailable"})
 
 
 @router.get("/api/detail")
 async def detail(book_id: str = Query(...)):
+    cache_key = f"detail:{book_id}"
+    cached = _cache_get(cache_key, _DETAIL_TTL)
+    if cached is not None:
+        return cached
     try:
         r = await client.get(
             f"{COMMUNITY_API}/api/detail",
@@ -270,7 +282,9 @@ async def detail(book_id: str = Query(...)):
         )
         data = r.json()
         if data.get("code") == 200:
+            _cache_set(cache_key, data)
             return data
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("detail 上游请求失败 book_id=%s: %s", book_id, e, exc_info=True)
+        return JSONResponse(status_code=502, content={"code": 502, "msg": f"upstream error: {type(e).__name__}", "data": {}})
     return {"code": 200, "data": {}, "msg": "no detail"}

@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "ren.neko.fanqie.twa",
-        "sha256_cert_fingerprints": ["B8:E9:75:81:96:48:93:E8:DD:ED:C3:66:3B:C3:1D:6C:F0:F0:AA:C0:97:A8:36:7C:07:A7:8A:F7:54:08:28:99"]
-      }
-    }]

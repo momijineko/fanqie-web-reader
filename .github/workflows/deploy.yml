@@ -6,18 +6,21 @@ on:
       - main
   workflow_dispatch:
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    
-    steps:
+  jobs:
+    deploy:
+      runs-on: ubuntu-latest
+      
+      steps:
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || 22 }}
+          envs: REDIS_PASSWORD
           script: |
             # ===== STEP 0: Free disk/memory FIRST, before anything else =====
             echo "=== Initial disk ==="
@@ -85,7 +88,7 @@ jobs:
             fi
             
             # Write unidbg config (connects to redis container on host network)
-            printf 'server:\n  port: 8099\nspring:\n  redis:\n    host: 127.0.0.1\n    port: 6379\n    password: fanqie_unidbg_2026\n    timeout: 2000\n    lettuce:\n      pool:\n        max-active: 4\n        max-idle: 2\n        min-idle: 0\napplication:\n  unidbg:\n    dynarmic: false\n    verbose: false\n    async: false\nfq:\n  api:\n    base-url: https://api5-normal-sinfonlineb.fqnovel.com\n    device-pool:\n      enabled: true\n      size: 1\n' > "$UNIDBG_DIR/application.yml"
+            printf 'server:\n  port: 8099\nspring:\n  redis:\n    host: 127.0.0.1\n    port: 6379\n    password: %s\n    timeout: 2000\n    lettuce:\n      pool:\n        max-active: 4\n        max-idle: 2\n        min-idle: 0\napplication:\n  unidbg:\n    dynarmic: false\n    verbose: false\n    async: false\nfq:\n  api:\n    base-url: https://api5-normal-sinfonlineb.fqnovel.com\n    device-pool:\n      enabled: true\n      size: 1\n' "${REDIS_PASSWORD:-fanqie_unidbg_2026}" > "$UNIDBG_DIR/application.yml"
             
             # Clean up temp unidbg files from previous runs
             rm -rf /tmp/unidbg_* /tmp/jna*.tmp 2>/dev/null || true
@@ -104,7 +107,7 @@ jobs:
             docker compose up -d redis
             # Wait for Redis to be ready
             for i in $(seq 1 10); do
-              if docker exec fanqie-redis redis-cli -a fanqie_unidbg_2026 --no-auth-warning ping 2>/dev/null | grep -q PONG; then
+              if docker exec fanqie-redis redis-cli -a "${REDIS_PASSWORD:-fanqie_unidbg_2026}" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
                 echo "Redis READY"
                 break
               fi

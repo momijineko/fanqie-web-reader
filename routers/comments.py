@@ -1,11 +1,24 @@
 import hashlib
 import time
 
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Query
+from pydantic import BaseModel, Field
 
-from shared import COMMUNITY_API, PARA_COMMENT_MOCK, UNIDBG_API, _fanqie_client, client
+from shared import COMMUNITY_API, PARA_COMMENT_MOCK, UNIDBG_API, _fanqie_client, client, logger
 
 router = APIRouter()
+
+
+class ParaCountPayload(BaseModel):
+    chapter_id: str = Field(..., min_length=1)
+    book_id: str = ""
+
+
+class ParaCommentsPayload(BaseModel):
+    chapter_id: str = Field(..., min_length=1)
+    book_id: str = ""
+    paragraph_idx: int = 0
+    count: int = 20
 
 
 @router.get("/api/comments")
@@ -33,8 +46,9 @@ async def comments(
                     if isinstance(clist, list):
                         d2["comment"] = [_normalize_book_comment(c) for c in clist]
             return data
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("comments 上游请求失败 book_id=%s: %s", book_id, e, exc_info=True)
+        return {"code": 502, "data": [], "msg": f"upstream error: {type(e).__name__}"}
     return {"code": 200, "data": [], "msg": "no comments"}
 
 
@@ -66,21 +80,15 @@ def _normalize_book_comment(c: dict) -> dict:
 
 
 @router.post("/api/paragraph_comment_counts")
-async def paragraph_comment_counts(request_body: dict = Body(default={})):
+async def paragraph_comment_counts(body: ParaCountPayload):
     """Get paragraph comment counts. Mock mode for local dev, unidbg proxy for production."""
-    body = request_body or {}
-    chapter_id = body.get("chapter_id", "")
-    book_id = body.get("book_id", "")
-    if not chapter_id:
-        return {"code": 400, "data": {}, "msg": "chapter_id required"}
-
     if PARA_COMMENT_MOCK:
-        return {"code": 200, "data": _mock_para_counts(chapter_id), "msg": "success (mock)"}
+        return {"code": 200, "data": _mock_para_counts(body.chapter_id), "msg": "success (mock)"}
 
     try:
-        req_body = {"chapterId": chapter_id, "commentSource": 2, "serverChannel": 17, "groupType": 15}
-        if book_id:
-            req_body["bookId"] = book_id
+        req_body = {"chapterId": body.chapter_id, "commentSource": 2, "serverChannel": 17, "groupType": 15}
+        if body.book_id:
+            req_body["bookId"] = body.book_id
         r = await _fanqie_client.post(
             f"{UNIDBG_API}/api/fqcomment/idea",
             json=req_body,
@@ -90,7 +98,7 @@ async def paragraph_comment_counts(request_body: dict = Body(default={})):
         counts = _extract_para_counts(data)
         return {"code": 200, "data": counts, "msg": "success"}
     except Exception as e:
-        print(f"paragraph_comment_counts ERROR: {type(e).__name__}: {e}")
+        logger.warning("paragraph_comment_counts 失败 chapter_id=%s: %s: %s", body.chapter_id, type(e).__name__, e)
     return {"code": 200, "data": {}, "msg": "no data"}
 
 
@@ -178,31 +186,23 @@ def _extract_para_counts(raw) -> dict:
 
 
 @router.post("/api/paragraph_comments")
-async def paragraph_comments(request_body: dict = Body(default={})):
+async def paragraph_comments(body: ParaCommentsPayload):
     """Get paragraph comments. Mock mode for local dev, unidbg proxy for production."""
-    body = request_body or {}
-    chapter_id = body.get("chapter_id", "")
-    book_id = body.get("book_id", "")
-    paragraph_idx = body.get("paragraph_idx", 0)
-    count = body.get("count", 20)
-    if not chapter_id:
-        return {"code": 400, "data": [], "msg": "chapter_id required"}
-
     if PARA_COMMENT_MOCK:
-        return {"code": 200, "data": _mock_para_comments(chapter_id, paragraph_idx), "msg": "success (mock)"}
+        return {"code": 200, "data": _mock_para_comments(body.chapter_id, body.paragraph_idx), "msg": "success (mock)"}
 
     try:
         r = await _fanqie_client.post(
             f"{UNIDBG_API}/api/fqcomment/list",
             json={
-                "chapterId": chapter_id,
-                "bookId": book_id,
-                "paraIndex": paragraph_idx,
+                "chapterId": body.chapter_id,
+                "bookId": body.book_id,
+                "paraIndex": body.paragraph_idx,
                 "commentSource": 2,
                 "commentType": 1,
                 "serverChannel": 18,
                 "groupType": 15,
-                "count": count,
+                "count": body.count,
             },
             timeout=20.0,
         )
@@ -210,7 +210,7 @@ async def paragraph_comments(request_body: dict = Body(default={})):
         comments = _normalize_comments(data)
         return {"code": 200, "data": comments, "msg": "success"}
     except Exception as e:
-        print(f"paragraph_comments ERROR: {e}")
+        logger.warning("paragraph_comments 失败 chapter_id=%s idx=%d: %s", body.chapter_id, body.paragraph_idx, e, exc_info=True)
     return {"code": 200, "data": [], "msg": "no paragraph comments"}
 
 

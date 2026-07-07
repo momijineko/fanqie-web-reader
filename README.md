@@ -53,14 +53,15 @@ python -m venv .venv
 # source .venv/bin/activate  # Linux/Mac
 
 # 3. 安装依赖
-pip install -r requirements.txt
-pip install websockets watchfiles  # HMR 热重载（可选）
+pip install -r requirements.txt   # 已包含 fonttools / watchfiles / websockets
 
 # 4. 启动服务
 python server.py
 ```
 
 启动后访问 [http://localhost:8080](http://localhost:8080)
+
+> 端口说明：本地 `python server.py` 监听 **8080**；Docker 镜像（`Dockerfile`/`docker-compose.yml`）监听 **8199**。两套端口刻意分开，避免本地开发与容器实例冲突。生产部署见 `.github/workflows/deploy.yml`。
 
 ### Cookie 登录
 
@@ -115,9 +116,12 @@ fanqie-web-reader/
 
 | 配置项 | 默认值 | 说明 |
 |---|---|---|
-| 端口 | `8080` | 服务监听端口 |
-| `COOKIE_FILE` | `user_cookie.json` | Cookie 存储文件（已 gitignore） |
+| 端口 | `8080`（本地）/ `8199`（Docker） | 服务监听端口 |
+| `CORS_ORIGINS` | 本地常用端口 | 逗号分隔的允许来源；设为 `*` 则关闭凭证模式 |
 | `COMMUNITY_API` | `http://101.35.133.34:5000` | 社区 API 地址 |
+| `REDIS_PASSWORD` | `fanqie_unidbg_2026` | unidbg 使用的 Redis 密码（Python 端不直接使用） |
+| `LOG_LEVEL` | `INFO` | 日志级别 |
+| `COOKIE_FILE` | `user_cookie.json` | Cookie 存储文件（已 gitignore） |
 
 ### 前端设置（localStorage）
 
