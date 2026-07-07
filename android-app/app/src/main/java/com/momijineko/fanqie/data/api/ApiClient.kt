@@ -21,10 +21,15 @@ class ApiClient(private val baseUrl: String) {
 
     private fun url(path: String) = baseUrl.trimEnd('/') + path
 
+    private fun buildUrl(path: String, params: Map<String, String> = emptyMap()): okhttp3.HttpUrl {
+        val builder = okhttp3.HttpUrl.parse(url(path))?.newBuilder()
+            ?: throw IllegalArgumentException("Invalid URL: ${url(path)}")
+        params.forEach { (k, v) -> builder.addQueryParameter(k, v) }
+        return builder.build()
+    }
+
     private suspend fun get(path: String, params: Map<String, String> = emptyMap()): JSONObject = withContext(Dispatchers.IO) {
-        val req = Request.Builder().url(url(path)).apply {
-            params.forEach { (k, v) -> url(url(path).newBuilder().addQueryParameter(k, v).build()) }
-        }.build()
+        val req = Request.Builder().url(buildUrl(path, params)).build()
         client.newCall(req).execute().use { resp ->
             JSONObject(resp.body?.string() ?: "{}")
         }
