@@ -122,8 +122,7 @@ function _applyShelfFilter() {
     const isPopup = !!item.closest('.shelf-folder-overlay');
     if (isPopup) return;
     const isFolder = item.classList.contains('shelf-folder');
-    var _n = item.querySelector('.name');
-    const name = (_n ? _n.textContent : '').toLowerCase();
+    const name = (item.querySelector('.name')?.textContent || '').toLowerCase();
     const names = (item.dataset.names || '').toLowerCase();
     const match = name.includes(filter) || names.includes(filter);
     if (!filter) {
@@ -137,8 +136,7 @@ function _applyShelfFilter() {
     }
   });
   document.querySelectorAll('.shelf-folder-panel .shelf-grid-item').forEach(item => {
-    var _n = item.querySelector('.name');
-    const name = (_n ? _n.textContent : '').toLowerCase();
+    const name = (item.querySelector('.name')?.textContent || '').toLowerCase();
     item.classList.toggle('filter-hidden', !!filter && !name.includes(filter));
   });
   $('pageTitle').textContent = filter ? `筛选 · ${visible} 本` : (_profileUser ? `我的书架 · ${_onlineShelf.length} 本` : `我的书架 · ${loadData().shelf.length} 本`);
@@ -182,8 +180,7 @@ function _setupLongPress(root) {
 
 function _showBookActions(item) {
   const bookId = item.dataset.bookId;
-  var _n = item.querySelector('.name');
-  const bookName = _n ? _n.textContent : '';
+  const bookName = item.querySelector('.name')?.textContent || '';
   if (!bookId) return;
 
   const isCloud = !!_profileUser;
@@ -308,15 +305,14 @@ function _newGroupPrompt(bookId, overlay, isCloud) {
   </div>`;
   ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
   document.body.appendChild(ov);
-  setTimeout(function() { var el = $('newGroupInput'); if (el) el.focus(); }, 100);
+  setTimeout(() => $('newGroupInput')?.focus(), 100);
 }
 
 function _doCreateGroup(bookId, isCloud) {
   const input = $('newGroupInput');
-  const name = (input ? input.value : '').trim();
+  const name = (input?.value || '').trim();
   if (!name) return;
-  var _ov = input.closest('.modal-overlay');
-  if (_ov) _ov.remove();
+  input.closest('.modal-overlay')?.remove();
   if (isCloud) {
     _moveBookToGroupWithName(bookId, name);
   } else {
