@@ -43,8 +43,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 COPY server.py .
 COPY shared.py .
 COPY routers/ ./routers/
-COPY charset.json .
-COPY font_decoder.py .
 COPY static/ ./static/
 
 # Set ownership to non-root user
