@@ -1,28 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Chapter list item. Spec: vertical, 12dp horizontal / 8dp vertical padding. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:gravity="center_vertical"
-    android:padding="@dimen/sp_3"
+    android:orientation="vertical"
+    android:paddingHorizontal="@dimen/sp_3"
+    android:paddingVertical="@dimen/sp_2"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true">
 
     <TextView
         android:id="@+id/tv_chapter_name"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:textSize="@dimen/fs_base"
         android:textColor="@color/text_primary"
         android:maxLines="1"
         android:ellipsize="end" />
 
-    <ImageView
-        android:layout_width="16dp"
-        android:layout_height="16dp"
-        android:src="@drawable/ic_arrow_back"
-        android:rotation="180"
-        android:alpha="0.3" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="@dimen/sp_1"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tv_chapter_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="@dimen/fs_xs"
+            android:textColor="@color/text_muted"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tv_chapter_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/sp_2"
+            android:textSize="@dimen/fs_xs"
+            android:textColor="@color/accent"
+            android:background="@color/accent_light"
+            android:paddingHorizontal="4dp"
+            android:paddingVertical="1dp"
+            android:visibility="gone" />
+    </LinearLayout>
 </LinearLayout>

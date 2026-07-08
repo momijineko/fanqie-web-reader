@@ -1,177 +1,217 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Book detail. E-ink: 1dp stroke cards, no elevation, 1px dividers. -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg">
 
-    <LinearLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="@dimen/sp_3">
+        android:background="@color/card_bg"
+        app:elevation="0dp">
 
-        <com.google.android.material.card.MaterialCardView
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/card_bg"
+            app:navigationIcon="@drawable/ic_arrow_back"
+            app:titleTextColor="@color/text_primary" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/sp_3"
-            app:cardCornerRadius="@dimen/radius_lg"
-            app:cardElevation="2dp"
-            app:cardBackgroundColor="@color/card_bg">
+            android:orientation="vertical"
+            android:padding="@dimen/sp_4">
 
+            <!-- Book header: cover + info column -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="@dimen/sp_5">
+                android:orientation="horizontal">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="@dimen/sp_4"
+                    app:cardCornerRadius="@dimen/radius_sm"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border"
+                    app:strokeWidth="1dp"
+                    app:cardBackgroundColor="@color/badge_bg"
+                    app:cardPreventCornerOverlap="false"
+                    app:cardUseCompatPadding="false">
+
+                    <ImageView
+                        android:id="@+id/iv_cover"
+                        android:layout_width="@dimen/cover_detail_w"
+                        android:layout_height="@dimen/cover_detail_h"
+                        android:src="@drawable/ic_book_placeholder"
+                        android:scaleType="centerCrop"
+                        android:contentDescription="封面" />
+                </com.google.android.material.card.MaterialCardView>
 
                 <LinearLayout
-                    android:layout_width="match_parent"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:layout_weight="1"
+                    android:orientation="vertical">
 
-                    <com.google.android.material.card.MaterialCardView
+                    <TextView
+                        android:id="@+id/tv_title"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="@dimen/fs_xl"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_primary"
+                        android:lineSpacingExtra="2dp" />
+
+                    <TextView
+                        android:id="@+id/tv_author"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:cardCornerRadius="@dimen/radius_sm"
-                        app:cardElevation="2dp"
-                        android:layout_marginEnd="@dimen/sp_4">
+                        android:layout_marginTop="@dimen/sp_2"
+                        android:textSize="@dimen/fs_sm"
+                        android:textColor="@color/accent"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground" />
 
-                        <ImageView
-                            android:id="@+id/iv_cover"
-                            android:layout_width="@dimen/cover_detail_w"
-                            android:layout_height="@dimen/cover_detail_h"
-                            android:src="@drawable/ic_book_placeholder"
-                            android:background="@drawable/bg_cover_placeholder"
-                            android:scaleType="centerCrop" />
-                    </com.google.android.material.card.MaterialCardView>
+                    <TextView
+                        android:id="@+id/tv_meta"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/sp_2"
+                        android:textSize="@dimen/fs_xs"
+                        android:textColor="@color/text_muted" />
 
+                    <!-- Primary actions -->
                     <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="@dimen/sp_3">
 
-                        <TextView
-                            android:id="@+id/tv_title"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:textSize="@dimen/fs_xl"
-                            android:textStyle="bold"
-                            android:textColor="@color/text_primary"
-                            android:lineSpacingExtra="2dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_read"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:text="@string/detail_start_reading"
+                            style="@style/Widget.Fanqie.Button.Primary" />
 
-                        <TextView
-                            android:id="@+id/tv_author"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="@dimen/sp_2"
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_shelf"
+                            android:layout_width="0dp"
+                            android:layout_height="44dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="@dimen/sp_2"
+                            android:text="@string/detail_add_shelf"
+                            style="@style/Widget.Fanqie.Button.Outlined" />
+                    </LinearLayout>
+
+                    <!-- Secondary actions -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="@dimen/sp_2">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_comments"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:text="@string/detail_comments"
                             android:textSize="@dimen/fs_sm"
-                            android:textColor="@color/text_secondary" />
+                            style="@style/Widget.Fanqie.Button.Outlined" />
 
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:orientation="horizontal"
-                            android:layout_marginTop="@dimen/sp_2"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:id="@+id/tv_category"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="@dimen/fs_xs"
-                                android:textColor="@color/accent"
-                                android:background="@color/accent_light"
-                                android:paddingVertical="2dp" android:paddingHorizontal="8dp"
-                                android:layout_marginEnd="@dimen/sp_2" />
-
-                            <TextView
-                                android:id="@+id/tv_score"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="@dimen/fs_xs"
-                                android:textColor="@color/text_muted"
-                                android:layout_marginEnd="@dimen/sp_2" />
-
-                            <TextView
-                                android:id="@+id/tv_word_count"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:textSize="@dimen/fs_xs"
-                                android:textColor="@color/text_muted" />
-                        </LinearLayout>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_share"
+                            android:layout_width="0dp"
+                            android:layout_height="40dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="@dimen/sp_2"
+                            android:text="@string/detail_share"
+                            android:textSize="@dimen/fs_sm"
+                            style="@style/Widget.Fanqie.Button.Outlined" />
                     </LinearLayout>
                 </LinearLayout>
-
-                <TextView
-                    android:id="@+id/tv_desc"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/sp_4"
-                    android:textSize="@dimen/fs_base"
-                    android:textColor="@color/text_secondary"
-                    android:lineSpacingExtra="4dp"
-                    android:maxLines="4"
-                    android:ellipsize="end" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="@dimen/sp_4">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_read"
-                        android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_weight="1"
-                        android:text="开始阅读"
-                        style="@style/Widget.Fanqie.Button.Primary" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_add_shelf"
-                        android:layout_width="0dp"
-                        android:layout_height="44dp"
-                        android:layout_weight="1"
-                        android:layout_marginStart="@dimen/sp_2"
-                        android:text="加入书架"
-                        style="@style/Widget.Fanqie.Button.Outlined" />
-                </LinearLayout>
             </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="目录"
-            android:textSize="@dimen/fs_lg"
-            android:textStyle="bold"
-            android:textColor="@color/text_primary"
-            android:layout_marginStart="@dimen/sp_2"
-            android:layout_marginBottom="@dimen/sp_2" />
+            <!-- Abstract -->
+            <TextView
+                android:id="@+id/tv_desc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sp_4"
+                android:textSize="@dimen/fs_base"
+                android:textColor="@color/text_secondary"
+                android:lineSpacingExtra="4dp"
+                android:maxLines="4"
+                android:ellipsize="end" />
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="@dimen/radius_md"
-            app:cardElevation="1dp"
-            app:cardBackgroundColor="@color/card_bg">
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_expand_desc"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/sp_1"
+                android:text="@string/detail_expand_desc"
+                android:textSize="@dimen/fs_sm"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="@dimen/sp_3"
+                android:background="@color/border" />
+
+            <!-- Chapter section -->
+            <TextView
+                android:id="@+id/tv_chapter_section"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/detail_chapters"
+                android:textSize="@dimen/fs_lg"
+                android:textStyle="bold"
+                android:textColor="@color/text_primary"
+                android:layout_marginBottom="@dimen/sp_2" />
+
+            <EditText
+                android:id="@+id/et_chapter_filter"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:hint="@string/search_hint"
+                android:inputType="text"
+                android:background="@drawable/bg_search_bar"
+                android:paddingHorizontal="@dimen/sp_3"
+                android:textSize="@dimen/fs_base"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_muted"
+                android:maxLines="1"
+                android:layout_marginBottom="@dimen/sp_2" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_chapters"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false" />
-        </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="@dimen/sp_4"
-            android:visibility="gone" />
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
-    </LinearLayout>
-</ScrollView>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

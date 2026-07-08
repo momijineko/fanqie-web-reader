@@ -1,4 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">番茄阅读</string>
+
+    <!-- Navigation -->
+    <string name="nav_search">发现</string>
+    <string name="nav_shelf">书架</string>
+    <string name="nav_profile">我的</string>
+
+    <!-- Search -->
+    <string name="search_hint">搜索书名、作者…</string>
+    <string name="search_no_results">未找到结果</string>
+    <string name="search_history">搜索历史</string>
+    <string name="search_clear_history">清除历史</string>
+    <string name="search_no_history">暂无搜索历史</string>
+    <string name="sort_default">默认</string>
+    <string name="sort_read">热度</string>
+    <string name="sort_words">字数</string>
+    <string name="sort_chapters">章节</string>
+    <string name="load_more">加载更多</string>
+    <string name="no_more">没有更多了</string>
+
+    <!-- Discover -->
+    <string name="discover_title">发现好书</string>
+    <string name="discover_desc">搜索书名或作者，找到你的下一本读物</string>
+    <string name="discover_categories">热门分类</string>
+    <string name="discover_explore">探索发现</string>
+
+    <!-- Shelf -->
+    <string name="shelf_empty">还没有收藏的书籍</string>
+    <string name="shelf_empty_tip">在书籍详情页点击收藏即可加入书架</string>
+    <string name="shelf_go_search">去发现好书</string>
+    <string name="shelf_cloud_empty">在线书架为空</string>
+    <string name="shelf_cloud_sync_failed">云端同步失败，显示本地书架</string>
+    <string name="shelf_remove_confirm">确认从书架移除此书？</string>
+    <string name="shelf_remove_cloud_confirm">确认从云端书架移除此书？</string>
+    <string name="shelf_search_hint">搜索书架…</string>
+
+    <!-- Groups -->
+    <string name="group_new">新建分组</string>
+    <string name="group_name_hint">输入分组名称</string>
+    <string name="group_move_to">移至分组</string>
+    <string name="group_remove_from">移出分组</string>
+    <string name="group_remove_shelf">移出书架</string>
+
+    <!-- Detail -->
+    <string name="detail_start_reading">开始阅读</string>
+    <string name="detail_continue_reading">继续阅读</string>
+    <string name="detail_chapters">章节目录</string>
+    <string name="detail_comments">评论</string>
+    <string name="detail_add_shelf">收藏</string>
+    <string name="detail_remove_shelf">已收藏</string>
+    <string name="detail_share">分享</string>
+    <string name="detail_expand_desc">展开简介</string>
+    <string name="detail_collapse_desc">收起简介</string>
+
+    <!-- Reader -->
+    <string name="reader_prev_chapter">上一章</string>
+    <string name="reader_next_chapter">下一章</string>
+    <string name="reader_chapter_list">目录</string>
+    <string name="reader_settings">设置</string>
+    <string name="reader_para_comments">段评</string>
+    <string name="reader_loading">加载中…</string>
+    <string name="reader_load_failed">加载失败</string>
+
+    <!-- Settings -->
+    <string name="settings_font_size">字号</string>
+    <string name="settings_line_height">行距</string>
+    <string name="settings_font_family">字体</string>
+    <string name="settings_read_mode">阅读模式</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_eink_mode">墨水屏模式</string>
+    <string name="settings_server">服务器地址</string>
+    <string name="settings_save">保存</string>
+    <string name="font_sans">黑体</string>
+    <string name="font_serif">宋体</string>
+    <string name="font_kai">楷体</string>
+    <string name="mode_page">翻页</string>
+    <string name="mode_scroll">滚动</string>
+    <string name="theme_default">默认</string>
+    <string name="theme_sepia">羊皮纸</string>
+    <string name="theme_green">护眼</string>
+    <string name="theme_dark">夜间</string>
+    <string name="theme_eink">墨水屏</string>
+
+    <!-- Profile -->
+    <string name="profile_not_logged_in">未登录</string>
+    <string name="profile_login_desc">登录后可同步在线书架</string>
+    <string name="profile_logged_in">已登录</string>
+    <string name="profile_cookie_login">Cookie 登录</string>
+    <string name="profile_update_cookie">更新 Cookie</string>
+    <string name="profile_logout">退出登录</string>
+    <string name="profile_settings">设置</string>
+    <string name="profile_clear_cache">清除缓存</string>
+    <string name="profile_server_status">服务器状态</string>
+    <string name="profile_check_server">检测服务器</string>
+    <string name="profile_about">关于</string>
+    <string name="profile_about_desc">本地缓存阅读 · 云端同步进度</string>
+
+    <!-- Comments -->
+    <string name="comments_title">评论</string>
+    <string name="comments_empty">暂无评论</string>
+    <string name="comments_loading">加载中…</string>
+
+    <!-- Common -->
+    <string name="confirm">确定</string>
+    <string name="cancel">取消</string>
+    <string name="retry">重试</string>
+    <string name="loading">加载中…</string>
+    <string name="load_failed">加载失败</string>
+    <string name="login_success">登录成功</string>
+    <string name="login_failed">登录失败</string>
+    <string name="logout_success">已退出登录</string>
+    <string name="added_to_shelf">已加入书架</string>
+    <string name="removed_from_shelf">已移出书架</string>
+    <string name="moved_to_group">已移动</string>
+    <string name="group_created">已创建分组</string>
+    <string name="cookie_invalid">Cookie 无效，请检查</string>
+    <string name="network_error">网络错误</string>
+    <string name="server_ok">服务器正常 ✓</string>
+    <string name="server_unreachable">服务器不可达 ✗</string>
 </resources>

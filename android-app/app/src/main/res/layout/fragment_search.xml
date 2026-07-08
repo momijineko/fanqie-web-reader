@@ -1,67 +1,130 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Search / discover. E-ink: 1px dividers, no elevation. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/bg">
 
-    <com.google.android.material.card.MaterialCardView
+    <!-- Search bar row -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardCornerRadius="0dp"
-        app:cardElevation="1dp"
-        app:cardBackgroundColor="@color/card_bg"
-        xmlns:app="http://schemas.android.com/apk/res-auto">
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="@dimen/sp_2"
+        android:paddingVertical="@dimen/sp_2"
+        android:background="@color/card_bg">
+
+        <EditText
+            android:id="@+id/et_search"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:hint="@string/search_hint"
+            android:inputType="text"
+            android:imeOptions="actionSearch"
+            android:background="@drawable/bg_search_bar"
+            android:paddingHorizontal="@dimen/sp_4"
+            android:textSize="@dimen/fs_base"
+            android:textColor="@color/text_primary"
+            android:textColorHint="@color/text_muted"
+            android:maxLines="1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_search"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="@dimen/sp_2"
+            app:icon="@drawable/ic_search"
+            app:iconTint="@color/white"
+            app:iconPadding="0dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:padding="0dp"
+            android:contentDescription="@string/search_hint"
+            style="@style/Widget.Fanqie.Button.Primary" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border" />
+
+    <!-- Search type tabs -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:background="@color/card_bg">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/tab_container"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="@dimen/sp_2">
+            android:paddingHorizontal="@dimen/sp_2"
+            android:paddingVertical="@dimen/sp_1" />
+    </HorizontalScrollView>
 
-            <EditText
-                android:id="@+id/et_search"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_weight="1"
-                android:hint="搜索书名、作者..."
-                android:inputType="text"
-                android:imeOptions="actionSearch"
-                android:background="@drawable/bg_search_bar"
-                android:paddingStart="@dimen/sp_4"
-                android:paddingEnd="@dimen/sp_4"
-                android:textSize="@dimen/fs_base"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_muted"
-                android:maxLines="1" />
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_search"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:layout_marginStart="@dimen/sp_2"
-                android:text="搜索"
-                style="@style/Widget.Fanqie.Button.Primary" />
-
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <ProgressBar
-        android:id="@+id/progress_bar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginTop="@dimen/sp_8"
-        android:visibility="gone" />
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_books"
+    <!-- Content: results list / home discover / progress -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:clipToPadding="false"
-        android:padding="@dimen/sp_3"
-        android:scrollbars="none" />
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_books"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:scrollbars="none" />
+
+        <ScrollView
+            android:id="@+id/home_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/sp_4"
+                android:gravity="center_horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/discover_title"
+                    android:textSize="@dimen/fs_xl"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginBottom="@dimen/sp_2" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/discover_desc"
+                    android:textSize="@dimen/fs_base"
+                    android:textColor="@color/text_secondary"
+                    android:gravity="center" />
+            </LinearLayout>
+        </ScrollView>
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="gone" />
+    </FrameLayout>
 
 </LinearLayout>

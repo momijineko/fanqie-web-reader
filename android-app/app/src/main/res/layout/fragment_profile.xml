@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Profile: account / settings (theme + eink + cache) / about. E-ink: 1dp stroke cards. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg"
-    xmlns:app="http://schemas.android.com/apk/res-auto">
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,15 +13,27 @@
         android:orientation="vertical"
         android:padding="@dimen/sp_4">
 
+        <!-- Account section: Cookie login -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/profile_about"
+            android:textSize="@dimen/fs_sm"
+            android:textColor="@color/text_muted"
+            android:layout_marginStart="@dimen/sp_1"
+            android:layout_marginBottom="@dimen/sp_2" />
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_login"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/sp_3"
+            android:layout_marginBottom="@dimen/sp_4"
             android:clickable="true"
             android:focusable="true"
-            app:cardCornerRadius="@dimen/radius_md"
-            app:cardElevation="1dp"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
             app:cardBackgroundColor="@color/card_bg">
 
             <LinearLayout
@@ -35,26 +49,29 @@
                     android:src="@drawable/ic_person"
                     android:background="@drawable/bg_circle_accent"
                     android:padding="@dimen/sp_2"
-                    android:layout_marginEnd="@dimen/sp_3" />
+                    android:layout_marginEnd="@dimen/sp_3"
+                    android:contentDescription="@string/profile_cookie_login" />
 
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical">
+
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="账号登录"
+                        android:text="@string/profile_cookie_login"
                         android:textSize="@dimen/fs_md"
                         android:textStyle="bold"
                         android:textColor="@color/text_primary" />
+
                     <TextView
                         android:id="@+id/tv_login_status"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="未登录"
+                        android:text="@string/profile_not_logged_in"
                         android:textSize="@dimen/fs_sm"
                         android:textColor="@color/text_secondary" />
                 </LinearLayout>
@@ -64,68 +81,160 @@
                     android:layout_height="20dp"
                     android:src="@drawable/ic_arrow_back"
                     android:rotation="180"
-                    android:alpha="0.4" />
+                    android:alpha="0.4"
+                    android:contentDescription="@string/profile_cookie_login" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Settings section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/profile_settings"
+            android:textSize="@dimen/fs_sm"
+            android:textColor="@color/text_muted"
+            android:layout_marginStart="@dimen/sp_1"
+            android:layout_marginBottom="@dimen/sp_2" />
+
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_server_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="@dimen/sp_3"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardCornerRadius="@dimen/radius_md"
-            app:cardElevation="1dp"
+            android:layout_marginBottom="@dimen/sp_4"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
             app:cardBackgroundColor="@color/card_bg">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
+                android:orientation="vertical"
                 android:padding="@dimen/sp_4">
 
-                <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:src="@drawable/ic_search"
-                    android:background="@drawable/bg_circle_accent"
-                    android:padding="@dimen/sp_2"
-                    android:layout_marginEnd="@dimen/sp_3" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
+                <!-- Theme picker -->
+                <TextView
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-                    <TextView
+                    android:text="@string/settings_theme"
+                    android:textSize="@dimen/fs_md"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_2"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/theme_container"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="服务器状态"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_default_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_default"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_default_fg"
+                            android:layout_marginEnd="@dimen/sp_2"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_sepia_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_sepia"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_sepia_fg"
+                            android:layout_marginEnd="@dimen/sp_2"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_green_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_green"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_green_fg"
+                            android:layout_marginEnd="@dimen/sp_2"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_dark_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_dark"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_dark_fg"
+                            android:layout_marginEnd="@dimen/sp_2"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_eink_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_eink"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_eink_fg"
+                            android:clickable="true"
+                            android:focusable="true" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="@dimen/sp_3"
+                    android:background="@color/border" />
+
+                <!-- E-ink toggle -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/settings_eink_mode"
                         android:textSize="@dimen/fs_md"
-                        android:textStyle="bold"
                         android:textColor="@color/text_primary" />
-                    <TextView
-                        android:id="@+id/tv_server_status"
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/eink_switch"
                         android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="点击检测"
-                        android:textSize="@dimen/fs_sm"
-                        android:textColor="@color/text_secondary" />
+                        android:layout_height="wrap_content" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Clear cache -->
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/card_settings"
+            android:id="@+id/card_clear_cache"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/sp_4"
             android:clickable="true"
             android:focusable="true"
-            app:cardCornerRadius="@dimen/radius_md"
-            app:cardElevation="1dp"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
             app:cardBackgroundColor="@color/card_bg">
 
             <LinearLayout
@@ -136,40 +245,77 @@
                 android:padding="@dimen/sp_4">
 
                 <ImageView
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
                     android:src="@drawable/ic_settings"
-                    android:background="@drawable/bg_circle_accent"
-                    android:padding="@dimen/sp_2"
-                    android:layout_marginEnd="@dimen/sp_3" />
+                    android:layout_marginEnd="@dimen/sp_3"
+                    android:contentDescription="@string/profile_clear_cache" />
 
-                <LinearLayout
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="阅读设置"
-                        android:textSize="@dimen/fs_md"
-                        android:textStyle="bold"
-                        android:textColor="@color/text_primary" />
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="字号、行距、字体、服务器地址"
-                        android:textSize="@dimen/fs_sm"
-                        android:textColor="@color/text_secondary" />
-                </LinearLayout>
+                    android:text="@string/profile_clear_cache"
+                    android:textSize="@dimen/fs_md"
+                    android:textColor="@color/text_primary" />
 
                 <ImageView
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_arrow_back"
                     android:rotation="180"
-                    android:alpha="0.4" />
+                    android:alpha="0.4"
+                    android:contentDescription="@string/profile_clear_cache" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- About section -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:padding="@dimen/sp_6">
+
+                <ImageView
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:src="@drawable/ic_launcher_foreground"
+                    android:layout_marginBottom="@dimen/sp_2"
+                    android:contentDescription="@string/app_name" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textSize="@dimen/fs_lg"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <TextView
+                    android:id="@+id/tv_version"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_1"
+                    android:textSize="@dimen/fs_sm"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_2"
+                    android:text="@string/profile_about_desc"
+                    android:textSize="@dimen/fs_sm"
+                    android:textColor="@color/text_muted" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

@@ -14,17 +14,19 @@
         <item name="android:statusBarColor">@color/card_bg</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowContentTransitions">false</item>
     </style>
 
-    <!-- Reader theme (full screen, no status bar tint) -->
+    <!-- Reader theme (full screen) -->
     <style name="Theme.Fanqie.Reader" parent="Theme.Fanqie">
         <item name="android:windowBackground">@color/reader_bg</item>
         <item name="android:statusBarColor">@color/reader_bg</item>
+        <item name="android:windowFullscreen">true</item>
     </style>
 
     <!-- Buttons -->
     <style name="Widget.Fanqie.Button.Primary" parent="Widget.Material3.Button">
-        <item name="cornerRadius">@dimen/radius_pill</item>
+        <item name="cornerRadius">@dimen/radius_sm</item>
         <item name="backgroundTint">@color/accent</item>
         <item name="android:textColor">@color/white</item>
         <item name="android:textSize">@dimen/fs_md</item>
@@ -32,16 +34,19 @@
     </style>
 
     <style name="Widget.Fanqie.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
-        <item name="cornerRadius">@dimen/radius_pill</item>
+        <item name="cornerRadius">@dimen/radius_sm</item>
         <item name="strokeColor">@color/border</item>
+        <item name="strokeWidth">1dp</item>
         <item name="android:textColor">@color/text_primary</item>
     </style>
 
     <!-- Card -->
     <style name="Widget.Fanqie.CardView" parent="Widget.Material3.CardView.Filled">
-        <item name="cardCornerRadius">@dimen/radius_md</item>
-        <item name="cardElevation">1dp</item>
+        <item name="cardCornerRadius">@dimen/radius_sm</item>
+        <item name="cardElevation">0dp</item>
         <item name="cardBackgroundColor">@color/card_bg</item>
+        <item name="strokeColor">@color/border</item>
+        <item name="strokeWidth">1dp</item>
     </style>
 
     <!-- Text appearances -->

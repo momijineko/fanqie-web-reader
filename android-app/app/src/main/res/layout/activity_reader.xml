@@ -1,9 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Reader: full-screen, page/scroll modes, settings + chapter overlays. E-ink: no elevation. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/reader_bg">
 
+    <!-- Page mode text -->
+    <TextView
+        android:id="@+id/tv_page_text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="@dimen/sp_5"
+        android:textColor="@color/text_primary"
+        android:visibility="gone" />
+
+    <!-- Scroll mode text -->
     <ScrollView
         android:id="@+id/scroll_view"
         android:layout_width="match_parent"
@@ -16,23 +28,42 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="@dimen/sp_5"
-            android:textColor="@color/text_primary"
-            android:visibility="visible" />
-
+            android:textColor="@color/text_primary" />
     </ScrollView>
 
-    <TextView
-        android:id="@+id/tv_page_text"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="@dimen/sp_5"
-        android:textColor="@color/text_primary"
-        android:visibility="gone" />
-
+    <!-- Top: chapter title bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
+        android:orientation="vertical"
+        android:background="@color/reader_bg">
+
+        <TextView
+            android:id="@+id/tv_chapter_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="@dimen/sp_4"
+            android:paddingVertical="@dimen/sp_2"
+            android:gravity="center"
+            android:textSize="@dimen/fs_sm"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:maxLines="1"
+            android:ellipsize="middle" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/border" />
+    </LinearLayout>
+
+    <!-- Bottom: page toolbar -->
+    <LinearLayout
+        android:id="@+id/page_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
         android:orientation="vertical"
         android:background="@color/reader_bg">
 
@@ -52,59 +83,19 @@
                 android:id="@+id/btn_prev"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="上一章"
+                android:text="@string/reader_prev_chapter"
                 android:textSize="@dimen/fs_sm"
+                android:minWidth="0dp"
                 style="@style/Widget.Fanqie.Button.Outlined" />
 
-            <TextView
-                android:id="@+id/tv_chapter_title"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:textSize="@dimen/fs_sm"
-                android:textStyle="bold"
-                android:textColor="@color/text_primary"
-                android:maxLines="1"
-                android:ellipsize="middle"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_chapters"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
                 android:layout_marginStart="@dimen/sp_2"
-                android:layout_marginEnd="@dimen/sp_2" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_next"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="下一章"
+                android:text="@string/reader_chapter_list"
                 android:textSize="@dimen/fs_sm"
-                style="@style/Widget.Fanqie.Button.Outlined" />
-        </LinearLayout>
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:orientation="vertical">
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/border" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="@dimen/sp_2"
-            android:background="@color/reader_bg">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_settings"
-                android:layout_width="wrap_content"
-                android:layout_height="36dp"
-                android:text="设置"
-                android:textSize="@dimen/fs_sm"
+                android:minWidth="0dp"
                 style="@style/Widget.Fanqie.Button.Outlined" />
 
             <TextView
@@ -115,8 +106,289 @@
                 android:gravity="center"
                 android:textSize="@dimen/fs_xs"
                 android:textColor="@color/text_muted"
-                android:layout_marginStart="@dimen/sp_2" />
+                android:layout_marginStart="@dimen/sp_2"
+                android:layout_marginEnd="@dimen/sp_2" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_settings"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="@string/reader_settings"
+                android:textSize="@dimen/fs_sm"
+                android:minWidth="0dp"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_next"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginStart="@dimen/sp_2"
+                android:text="@string/reader_next_chapter"
+                android:textSize="@dimen/fs_sm"
+                android:minWidth="0dp"
+                style="@style/Widget.Fanqie.Button.Outlined" />
         </LinearLayout>
     </LinearLayout>
+
+    <!-- Settings overlay panel -->
+    <LinearLayout
+        android:id="@+id/settings_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="@color/card_bg"
+        android:padding="@dimen/sp_4"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/border" />
+
+        <!-- Font size stepper -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="@dimen/sp_3">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_font_size"
+                android:textSize="@dimen/fs_sm"
+                android:textColor="@color/text_primary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_font_minus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="-"
+                android:minWidth="0dp"
+                android:padding="0dp"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+
+            <TextView
+                android:id="@+id/tv_font_size"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/sp_3"
+                android:textSize="@dimen/fs_md"
+                android:textStyle="bold"
+                android:textColor="@color/accent" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_font_plus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="+"
+                android:minWidth="0dp"
+                android:padding="0dp"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+        </LinearLayout>
+
+        <!-- Line height stepper -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="@dimen/sp_3">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_line_height"
+                android:textSize="@dimen/fs_sm"
+                android:textColor="@color/text_primary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_line_minus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="-"
+                android:minWidth="0dp"
+                android:padding="0dp"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+
+            <TextView
+                android:id="@+id/tv_line_height"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/sp_3"
+                android:textSize="@dimen/fs_md"
+                android:textStyle="bold"
+                android:textColor="@color/accent" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_line_plus"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:text="+"
+                android:minWidth="0dp"
+                android:padding="0dp"
+                style="@style/Widget.Fanqie.Button.Outlined" />
+        </LinearLayout>
+
+        <!-- Font family chips -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/sp_3"
+            android:text="@string/settings_font_family"
+            android:textSize="@dimen/fs_sm"
+            android:textColor="@color/text_primary" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_font"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_font_sans"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/font_sans" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_font_serif"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/font_serif" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_font_kai"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/font_kai" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Read mode chips -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/sp_2"
+            android:text="@string/settings_read_mode"
+            android:textSize="@dimen/fs_sm"
+            android:textColor="@color/text_primary" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_mode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_mode_page"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mode_page" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_mode_scroll"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/mode_scroll" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_mode_noanim"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="无动画" />
+        </com.google.android.material.chip.ChipGroup>
+
+        <!-- Theme chips -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/sp_2"
+            android:text="@string/settings_theme"
+            android:textSize="@dimen/fs_sm"
+            android:textColor="@color/text_primary" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chip_group_theme"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_theme_default"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/theme_default" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_theme_sepia"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/theme_sepia" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_theme_green"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/theme_green" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_theme_dark"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/theme_dark" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_theme_eink"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/theme_eink" />
+        </com.google.android.material.chip.ChipGroup>
+    </LinearLayout>
+
+    <!-- Chapter navigation overlay panel -->
+    <LinearLayout
+        android:id="@+id/chapter_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical"
+        android:background="@color/card_bg"
+        android:padding="@dimen/sp_2"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/border" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_chapter_list"
+            android:layout_width="match_parent"
+            android:layout_height="320dp"
+            android:layout_marginTop="@dimen/sp_2"
+            android:scrollbars="vertical" />
+    </LinearLayout>
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
 
 </FrameLayout>

@@ -1,8 +1,10 @@
 package com.momijineko.fanqie.ui
 
 import android.os.Bundle
+import android.util.TypedValue
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
-import com.google.android.material.slider.Slider
 import com.momijineko.fanqie.App
 import com.momijineko.fanqie.R
 import com.momijineko.fanqie.databinding.ActivitySettingsBinding
@@ -10,6 +12,14 @@ import com.momijineko.fanqie.util.EinkUtils
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySettingsBinding
+
+    private val themes = listOf(
+        "default" to "默认",
+        "sepia" to "羊皮纸",
+        "green" to "护眼绿",
+        "dark" to "暗黑",
+        "eink" to "墨水屏",
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,11 +65,55 @@ class SettingsActivity : AppCompatActivity() {
         if (prefs.readMode == "scroll") binding.rbModeScroll.isChecked = true
         else binding.rbModePage.isChecked = true
 
+        setupThemePicker()
+
+        binding.switchEink.isChecked = prefs.einkMode
+        binding.switchEink.setOnCheckedChangeListener { _, checked ->
+            prefs.einkMode = checked
+            if (checked) EinkUtils.applyEinkOptimizations(this)
+            EinkUtils.forceFullRefresh(this)
+        }
+
         binding.etServerUrl.setText(prefs.serverUrl)
         binding.btnSaveServer.setOnClickListener {
             prefs.serverUrl = binding.etServerUrl.text.toString().trim()
             App.instance.reconnectApi()
             finish()
+        }
+    }
+
+    private fun setupThemePicker() {
+        val container = binding.themeContainer
+        container.removeAllViews()
+        val dp = resources.displayMetrics.density
+        val current = App.instance.prefs.readingTheme
+
+        for ((id, name) in themes) {
+            val chip = TextView(this)
+            chip.text = name
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            val pad = (dp * 12).toInt()
+            chip.setPadding(pad, (dp * 8).toInt(), pad, (dp * 8).toInt())
+            val colors = EinkUtils.themeColors(id)
+            chip.setBackgroundColor(colors.bg)
+            chip.setTextColor(colors.fg)
+            if (id == current) {
+                chip.setTypeface(null, android.graphics.Typeface.BOLD)
+                chip.setBackgroundResource(R.color.accent)
+                chip.setTextColor(getColor(R.color.white))
+            }
+            val lp = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+            )
+            lp.marginEnd = (dp * 8).toInt()
+            chip.layoutParams = lp
+            chip.setOnClickListener {
+                App.instance.prefs.readingTheme = id
+                setupThemePicker()
+                EinkUtils.forceFullRefresh(this)
+            }
+            container.addView(chip)
         }
     }
 }

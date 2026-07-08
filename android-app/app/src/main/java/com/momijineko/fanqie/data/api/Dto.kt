@@ -26,6 +26,9 @@ data class BookDetail(
     val score: String,
     val wordNumber: String,
     val creationStatus: String,
+    val originalBookName: String = "",
+    val aliasName: String = "",
+    val chapterNumber: String = "",
 )
 
 data class ChapterInfo(
@@ -33,6 +36,7 @@ data class ChapterInfo(
     val name: String,
     val order: String,
     val updateTime: Long,
+    val volumeName: String = "",
 )
 
 data class ChapterContent(
@@ -61,4 +65,29 @@ data class BookshelfItem(
     val lastReadTime: Long,
     val readChapterIdx: Int,
     val readItemId: String,
+    val lastUpdateTime: Long = 0,
+    val updateStopped: Boolean = false,
+)
+
+data class CommentInfo(
+    val userName: String,
+    val avatarUrl: String,
+    val content: String,
+    val createTime: Long,
+    val diggCount: Int,
+    val replies: List<CommentInfo> = emptyList(),
+)
+
+data class ParaCommentCount(
+    val paragraphIdx: Int,
+    val count: Int,
+)
+
+data class ParaComment(
+    val userName: String,
+    val avatarUrl: String,
+    val content: String,
+    val createTime: Long,
+    val diggCount: Int,
+    val replies: List<ParaComment> = emptyList(),
 )

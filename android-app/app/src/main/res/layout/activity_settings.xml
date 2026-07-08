@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Settings: typography, mode, theme, eink, server. E-ink: 1dp stroke cards, no elevation. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg">
+    android:background="@color/bg"
+    android:scrollbars="none">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -11,12 +13,15 @@
         android:orientation="vertical"
         android:padding="@dimen/sp_4">
 
+        <!-- Typography card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/sp_4"
-            app:cardCornerRadius="@dimen/radius_md"
-            app:cardElevation="1dp"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
             app:cardBackgroundColor="@color/card_bg">
 
             <LinearLayout
@@ -28,7 +33,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="字号"
+                    android:text="@string/settings_font_size"
                     android:textSize="@dimen/fs_md"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
@@ -39,6 +44,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:layout_marginTop="@dimen/sp_2">
+
                     <com.google.android.material.slider.Slider
                         android:id="@+id/slider_font_size"
                         android:layout_width="0dp"
@@ -47,10 +53,12 @@
                         android:valueFrom="14"
                         android:valueTo="28"
                         android:stepSize="1" />
+
                     <TextView
                         android:id="@+id/tv_font_size_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/sp_2"
                         android:textSize="@dimen/fs_base"
                         android:textColor="@color/accent"
                         android:textStyle="bold" />
@@ -59,7 +67,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="行距"
+                    android:text="@string/settings_line_height"
                     android:textSize="@dimen/fs_md"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary"
@@ -71,6 +79,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:layout_marginTop="@dimen/sp_2">
+
                     <com.google.android.material.slider.Slider
                         android:id="@+id/slider_line_height"
                         android:layout_width="0dp"
@@ -79,10 +88,12 @@
                         android:valueFrom="1.4"
                         android:valueTo="2.4"
                         android:stepSize="0.1" />
+
                     <TextView
                         android:id="@+id/tv_line_height_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/sp_2"
                         android:textSize="@dimen/fs_base"
                         android:textColor="@color/accent"
                         android:textStyle="bold" />
@@ -90,12 +101,15 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Font family card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/sp_4"
-            app:cardCornerRadius="@dimen/radius_md"
-            app:cardElevation="1dp"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
             app:cardBackgroundColor="@color/card_bg">
 
             <LinearLayout
@@ -107,7 +121,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="字体"
+                    android:text="@string/settings_font_family"
                     android:textSize="@dimen/fs_md"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
@@ -118,34 +132,40 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_marginTop="@dimen/sp_2">
+
                     <RadioButton
                         android:id="@+id/rb_font_sans"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="黑体" />
+                        android:text="@string/font_sans" />
+
                     <RadioButton
                         android:id="@+id/rb_font_serif"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="宋体" />
+                        android:text="@string/font_serif" />
+
                     <RadioButton
                         android:id="@+id/rb_font_kai"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="楷体" />
+                        android:text="@string/font_kai" />
                 </RadioGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Read mode card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/sp_4"
-            app:cardCornerRadius="@dimen/radius_md"
-            app:cardElevation="1dp"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
             app:cardBackgroundColor="@color/card_bg">
 
             <LinearLayout
@@ -157,7 +177,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="阅读模式"
+                    android:text="@string/settings_read_mode"
                     android:textSize="@dimen/fs_md"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
@@ -168,27 +188,33 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_marginTop="@dimen/sp_2">
+
                     <RadioButton
                         android:id="@+id/rb_mode_page"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="翻页" />
+                        android:text="@string/mode_page" />
+
                     <RadioButton
                         android:id="@+id/rb_mode_scroll"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="滚动" />
+                        android:text="@string/mode_scroll" />
                 </RadioGroup>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Theme card -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="@dimen/radius_md"
-            app:cardElevation="1dp"
+            android:layout_marginBottom="@dimen/sp_4"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
             app:cardBackgroundColor="@color/card_bg">
 
             <LinearLayout
@@ -200,7 +226,139 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="服务器地址"
+                    android:text="@string/settings_theme"
+                    android:textSize="@dimen/fs_md"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/sp_2"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/theme_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_default_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_default"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_default_fg"
+                            android:layout_marginEnd="@dimen/sp_2"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_sepia_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_sepia"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_sepia_fg"
+                            android:layout_marginEnd="@dimen/sp_2"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_green_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_green"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_green_fg"
+                            android:layout_marginEnd="@dimen/sp_2"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_dark_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_dark"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_dark_fg"
+                            android:layout_marginEnd="@dimen/sp_2"
+                            android:clickable="true"
+                            android:focusable="true" />
+
+                        <TextView
+                            android:layout_width="44dp"
+                            android:layout_height="44dp"
+                            android:background="@color/theme_eink_bg"
+                            android:gravity="center"
+                            android:text="@string/theme_eink"
+                            android:textSize="@dimen/fs_xs"
+                            android:textColor="@color/theme_eink_fg"
+                            android:clickable="true"
+                            android:focusable="true" />
+                    </LinearLayout>
+                </HorizontalScrollView>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- E-ink card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="@dimen/sp_4"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="@dimen/sp_4">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/settings_eink_mode"
+                    android:textSize="@dimen/fs_md"
+                    android:textColor="@color/text_primary" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_eink"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Server URL card -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="@dimen/radius_sm"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/border"
+            app:strokeWidth="1dp"
+            app:cardBackgroundColor="@color/card_bg">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="@dimen/sp_4">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_server"
                     android:textSize="@dimen/fs_md"
                     android:textStyle="bold"
                     android:textColor="@color/text_primary" />
@@ -210,6 +368,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_marginTop="@dimen/sp_2">
+
                     <EditText
                         android:id="@+id/et_server_url"
                         android:layout_width="0dp"
@@ -218,15 +377,18 @@
                         android:hint="http://192.168.1.100:8080"
                         android:inputType="textUri"
                         android:background="@drawable/bg_search_bar"
-                        android:paddingStart="@dimen/sp_3"
-                        android:paddingEnd="@dimen/sp_3"
-                        android:textSize="@dimen/fs_base" />
+                        android:paddingHorizontal="@dimen/sp_3"
+                        android:textSize="@dimen/fs_base"
+                        android:textColor="@color/text_primary"
+                        android:textColorHint="@color/text_muted"
+                        android:maxLines="1" />
+
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_save_server"
                         android:layout_width="wrap_content"
                         android:layout_height="40dp"
                         android:layout_marginStart="@dimen/sp_2"
-                        android:text="保存"
+                        android:text="@string/settings_save"
                         style="@style/Widget.Fanqie.Button.Primary" />
                 </LinearLayout>
             </LinearLayout>

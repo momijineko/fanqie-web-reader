@@ -27,6 +27,10 @@ class Prefs(context: Context) {
         get() = sp.getString("read_mode", "page")!!
         set(value) = sp.edit().putString("read_mode", value).apply()
 
+    var readingTheme: String
+        get() = sp.getString("reading_theme", "default")!!
+        set(value) = sp.edit().putString("reading_theme", value).apply()
+
     var einkMode: Boolean
         get() = sp.getBoolean("eink_mode", true)
         set(value) = sp.edit().putBoolean("eink_mode", value).apply()
@@ -35,6 +39,20 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("logged_in", false)
         set(value) = sp.edit().putBoolean("logged_in", value).apply()
 
+    var cachedUserName: String
+        get() = sp.getString("cached_user_name", "")!!
+        set(value) = sp.edit().putString("cached_user_name", value).apply()
+
+    var cachedUserAvatar: String
+        get() = sp.getString("cached_user_avatar", "")!!
+        set(value) = sp.edit().putString("cached_user_avatar", value).apply()
+
+    var searchTab: Int
+        get() = sp.getInt("search_tab", 3)
+        set(value) = sp.edit().putInt("search_tab", value).apply()
+
     fun getString(key: String, default: String = ""): String = sp.getString(key, default)!!
     fun putString(key: String, value: String) = sp.edit().putString(key, value).apply()
+    fun getBoolean(key: String, default: Boolean = false): Boolean = sp.getBoolean(key, default)
+    fun putBoolean(key: String, value: Boolean) = sp.edit().putBoolean(key, value).apply()
 }
