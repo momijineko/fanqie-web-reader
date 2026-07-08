@@ -69,7 +69,7 @@ class ProfileFragment : Fragment() {
                     )
                     setTextColor(requireContext().getColor(R.color.accent))
                     val pad = (dp * 16).toInt()
-                    setPadding(pad, (dp * 12).toInt(), pad, (dp * 12).toInt)
+                    setPadding(pad, (dp * 12).toInt(), pad, (dp * 12).toInt())
                     setOnClickListener {
                         startActivity(Intent(requireContext(), SettingsActivity::class.java))
                     }

@@ -14,11 +14,10 @@ class ChapterAdapter(
     private val onClick: (chapterIdx: Int) -> Unit,
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private sealed interface Item {
+    sealed interface Item {
         data class Header(val volumeName: String) : Item
         data class Chapter(val chapter: ChapterInfo, val originalIdx: Int) : Item
     }
-
     private val items = mutableListOf<Item>()
     private var currentIdx = -1
     private var allChapters: List<ChapterInfo> = emptyList()
