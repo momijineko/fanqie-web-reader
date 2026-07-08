@@ -4,6 +4,8 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
+RUN sed -i "s|deb.debian.org|mirrors.aliyun.com|g" /etc/apt/sources.list.d/debian.sources
+
 # Install build dependencies for packages that need compilation (lxml)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -16,8 +18,8 @@ RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip -i https://pypi.tuna.tsinghua.edu.cn/simple && \
+    pip install --no-cache-dir -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 
 # Stage 2: Runtime - minimal production image
@@ -26,7 +28,8 @@ FROM python:3.12-slim AS runtime
 WORKDIR /app
 
 # Install runtime libraries for lxml
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sed -i "s|deb.debian.org|mirrors.aliyun.com|g" /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && apt-get install -y --no-install-recommends \
     libxml2 \
     libxslt1.1 \
     && rm -rf /var/lib/apt/lists/*

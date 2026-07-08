@@ -2,10 +2,9 @@ services:
   redis:
     image: redis:7-alpine
     container_name: fanqie-redis
-    network_mode: host
     command: >
       redis-server
-      --bind 127.0.0.1
+      --bind 0.0.0.0
       --port 6379
       --requirepass ${REDIS_PASSWORD:-fanqie_unidbg_2026}
       --maxmemory 64mb
@@ -14,21 +13,37 @@ services:
       --appendonly no
     restart: unless-stopped
 
+  unidbg:
+    build:
+      context: .
+      dockerfile: Dockerfile.unidbg
+    container_name: fanqie-unidbg
+    mem_limit: 1g
+    environment:
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_REDIS_PASSWORD=fanqie_unidbg_2026
+    restart: unless-stopped
+    depends_on:
+      - redis
+
   fanqie-web-reader:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: fanqie-web-reader
-    network_mode: host
+    ports:
+      - "8199:8199"
     mem_limit: 512m
     environment:
       - PARA_COMMENT_MOCK=false
-      - UNIDBG_API=http://127.0.0.1:8099
+      - UNIDBG_API=http://unidbg:8099
       - COMMUNITY_API=${COMMUNITY_API:-http://101.35.133.34:5000}
       - CORS_ORIGINS=${CORS_ORIGINS:-}
     restart: unless-stopped
     depends_on:
       - redis
+      - unidbg
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8199/api/health', timeout=5)"]
       interval: 30s
