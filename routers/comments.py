@@ -1,7 +1,9 @@
 import hashlib
 import time
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from shared import COMMUNITY_API, PARA_COMMENT_MOCK, UNIDBG_API, _fanqie_client, client, logger
@@ -450,3 +452,29 @@ def _normalize_comments(raw) -> list:
 
         result.append(comment)
     return result
+
+
+_ALLOWED_IMG_HOSTS = ("fqnovelpic.com", "byteimg.com", "bytecdn.cn", "toutiao.com", "bytedance.com", "ixigua.com")
+
+
+@router.get("/api/img_proxy")
+async def img_proxy(url: str = Query(..., min_length=1)):
+    """Proxy image requests to bypass IP-bound signature restrictions on Fanqie CDN avatars."""
+    parsed = urlparse(url)
+    if not parsed.scheme or not parsed.netloc:
+        return Response(status_code=400, content="invalid url")
+    if not parsed.scheme.startswith("http"):
+        return Response(status_code=400, content="invalid scheme")
+    if not any(parsed.netloc.endswith(h) for h in _ALLOWED_IMG_HOSTS):
+        return Response(status_code=403, content="host not allowed")
+
+    try:
+        r = await client.get(url, timeout=15.0)
+        if r.status_code != 200:
+            logger.warning("img_proxy upstream %d for %s", r.status_code, parsed.netloc)
+            return Response(status_code=r.status_code, content=r.content)
+        content_type = r.headers.get("content-type", "image/jpeg")
+        return Response(content=r.content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
+    except Exception as e:
+        logger.warning("img_proxy error: %s: %s", type(e).__name__, e)
+    return Response(status_code=502, content="proxy error")

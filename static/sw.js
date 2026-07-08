@@ -50,6 +50,24 @@ self.addEventListener('fetch', e => {
     return;
   }
 
+  // Cache proxied images — cache-first with exact URL match
+  if (url.pathname === '/api/img_proxy') {
+    e.respondWith(
+      caches.open(IMG_CACHE).then(cache =>
+        cache.match(e.request).then(cached => {
+          if (cached) return cached;
+          return fetch(e.request).then(resp => {
+            if (resp.ok) {
+              cache.put(e.request, resp.clone()).catch(() => {});
+            }
+            return resp;
+          });
+        })
+      )
+    );
+    return;
+  }
+
   if (url.pathname.startsWith('/api/') && e.request.method === 'GET') {
     // Network-first with cache fallback for GET API requests
     e.respondWith(
