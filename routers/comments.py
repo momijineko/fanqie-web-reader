@@ -271,12 +271,12 @@ def _mock_para_comments(chapter_id: str, paragraph_idx: int) -> list:
 
 
 def _fix_img_url(url: str) -> str:
-    """Convert ByteDance HEIC avatar URLs to browser-friendly JPEG."""
-    if not url:
-        return url
-    if ".heic" in url.lower():
-        url = url.replace(".heic", ".jpeg").replace(".HEIC", ".jpeg")
-    return url
+    """Return URL unchanged — HEIC→JPEG conversion is handled by img_proxy.
+
+    Previously this changed .heic to .jpeg in the path, but that breaks the
+    CDN signature (x-signature is computed over the full path including extension).
+    """
+    return url or ""
 
 
 def _normalize_comments(raw) -> list:
@@ -456,10 +456,27 @@ def _normalize_comments(raw) -> list:
 
 _ALLOWED_IMG_HOSTS = ("fqnovelpic.com", "byteimg.com", "bytecdn.cn", "toutiao.com", "bytedance.com", "ixigua.com")
 
+_heif_registered = False
+
+
+def _ensure_heif_support():
+    """Register pillow-heif plugin for HEIC decoding (lazy, one-time)."""
+    global _heif_registered
+    if _heif_registered:
+        return
+    try:
+        from pillow_heif import register_heif_opener
+        register_heif_opener()
+        _heif_registered = True
+        logger.info("pillow-heif registered for HEIC decoding")
+    except ImportError:
+        logger.warning("pillow-heif not installed, HEIC images will not be converted")
+
 
 @router.get("/api/img_proxy")
 async def img_proxy(url: str = Query(..., min_length=1)):
-    """Proxy image requests to bypass IP-bound signature restrictions on Fanqie CDN avatars."""
+    """Proxy image requests to bypass IP-bound signature restrictions on Fanqie CDN avatars.
+    Converts HEIC responses to JPEG for browser compatibility."""
     parsed = urlparse(url)
     if not parsed.scheme or not parsed.netloc:
         return Response(status_code=400, content="invalid url")
@@ -474,6 +491,26 @@ async def img_proxy(url: str = Query(..., min_length=1)):
             logger.warning("img_proxy upstream %d for %s", r.status_code, parsed.netloc)
             return Response(status_code=r.status_code, content=r.content)
         content_type = r.headers.get("content-type", "image/jpeg")
+
+        # Convert HEIC to JPEG for browser compatibility
+        if "heic" in content_type.lower() or "heif" in content_type.lower():
+            _ensure_heif_support()
+            if _heif_registered:
+                try:
+                    import io
+                    from PIL import Image
+                    img = Image.open(io.BytesIO(r.content))
+                    buf = io.BytesIO()
+                    img.convert("RGB").save(buf, format="JPEG", quality=85)
+                    return Response(
+                        content=buf.getvalue(),
+                        media_type="image/jpeg",
+                        headers={"Cache-Control": "public, max-age=86400"},
+                    )
+                except Exception as e:
+                    logger.warning("img_proxy HEIC conversion failed: %s: %s", type(e).__name__, e)
+                    # Fall through to serve original (browser onerror will handle)
+
         return Response(content=r.content, media_type=content_type, headers={"Cache-Control": "public, max-age=86400"})
     except Exception as e:
         logger.warning("img_proxy error: %s: %s", type(e).__name__, e)
