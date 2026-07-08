@@ -737,9 +737,9 @@ function toggleToolbar() {
   const stb = $('readerToolbar');
   if (stb) stb.classList.toggle('hidden-toolbar');
 }
-function pgFontSize(d) { changeFontSize(d); setTimeout(()=>pgCalculatePages(),150); }
-function pgLineHeight(d) { changeLineHeight(d); setTimeout(()=>pgCalculatePages(),150); }
-function pgCalcDelayed() { setTimeout(()=>pgCalculatePages(),150); }
+function pgFontSize(d) { changeFontSize(d); setTimeout(()=>{pgCalculatePages(); applyParaCommentCounts();},150); }
+function pgLineHeight(d) { changeLineHeight(d); setTimeout(()=>{pgCalculatePages(); applyParaCommentCounts();},150); }
+function pgCalcDelayed() { setTimeout(()=>{pgCalculatePages(); applyParaCommentCounts();},150); }
 
 // ====== Touch gestures ======
 function setupPgGestures() {
@@ -913,6 +913,7 @@ window.addEventListener('reader-settings-change', () => {
   const vp = $('pageViewport');
   if (vp) setTimeout(() => {
     pgCalculatePages();
+    applyParaCommentCounts();
   }, 150);
 });
 
@@ -923,14 +924,15 @@ window.addEventListener('resize', () => {
   clearTimeout(pgResizeTimer);
   pgResizeTimer = setTimeout(() => {
     pgCalculatePages();
+    applyParaCommentCounts();
   }, 200);
 });
 
 // ====== Paragraph comments ======
-async function loadParaCommentCounts(chapterId, bookId) {
-  const bid = bookId || currentBookId;
-  const counts = await fetchParagraphCommentCounts(chapterId, bid);
-  // Update badges in both scroll and page readers
+let _paraCommentCounts = {};
+
+function applyParaCommentCounts() {
+  const counts = _paraCommentCounts;
   document.querySelectorAll('.para-wrap').forEach(wrap => {
     const idx = wrap.dataset.paraIdx;
     if (idx === undefined) return;
@@ -944,6 +946,13 @@ async function loadParaCommentCounts(chapterId, bookId) {
       wrap.classList.remove('has-comments');
     }
   });
+}
+
+async function loadParaCommentCounts(chapterId, bookId) {
+  const bid = bookId || currentBookId;
+  const counts = await fetchParagraphCommentCounts(chapterId, bid);
+  _paraCommentCounts = counts || {};
+  applyParaCommentCounts();
 }
 
 function openParaComment(paraIdx) {
