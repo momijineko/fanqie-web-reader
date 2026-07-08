@@ -2,7 +2,7 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-ADD https://ghproxy.cc/https://github.com/mtongle/fqnovel-unidbg/releases/download/v0.0.4/unidbg-boot-server-0.0.4.jar app.jar
+ADD https://gh-proxy.com/https://github.com/mtongle/fqnovel-unidbg/releases/download/v0.0.4/unidbg-boot-server-0.0.4.jar app.jar
 
 EXPOSE 8099
 
