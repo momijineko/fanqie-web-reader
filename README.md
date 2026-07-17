@@ -77,6 +77,7 @@ python server.py
 |---|---|---|
 | `PARA_COMMENT_MOCK` | `true` | 设为 `false` 启用真实段评 |
 | `UNIDBG_API` | `http://127.0.0.1:8099` | unidbg 签名代理地址 |
+| `UNIDBG_ADMIN_PASSWORD` | 无 | Docker 部署必填；可用 `openssl rand -base64 32` 生成 |
 
 ## 📁 项目结构
 
@@ -119,6 +120,7 @@ fanqie-web-reader/
 | `CORS_ORIGINS` | 本地常用端口 | 逗号分隔的允许来源；设为 `*` 则关闭凭证模式 |
 | `COMMUNITY_API` | `http://101.35.133.34:5000` | 社区 API 地址 |
 | `REDIS_PASSWORD` | `fanqie_unidbg_2026` | unidbg 使用的 Redis 密码（Python 端不直接使用） |
+| `UNIDBG_ADMIN_PASSWORD` | 无 | unidbg 管理后台密码，禁止使用上游默认值 `admin123` |
 | `LOG_LEVEL` | `INFO` | 日志级别 |
 | `COOKIE_FILE` | `user_cookie.json` | Cookie 存储文件（已 gitignore） |
 

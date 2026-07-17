@@ -23,6 +23,7 @@ services:
       - SPRING_REDIS_HOST=redis
       - SPRING_REDIS_PORT=6379
       - SPRING_REDIS_PASSWORD=fanqie_unidbg_2026
+      - APPLICATION_ADMIN_PASSWORD=${UNIDBG_ADMIN_PASSWORD:?Set UNIDBG_ADMIN_PASSWORD in .env}
     restart: unless-stopped
     depends_on:
       - redis

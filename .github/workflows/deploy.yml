@@ -15,12 +15,13 @@ jobs:
       uses: appleboy/ssh-action@v1.0.3
       env:
         REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+        UNIDBG_ADMIN_PASSWORD: ${{ secrets.UNIDBG_ADMIN_PASSWORD }}
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USERNAME }}
         key: ${{ secrets.VPS_SSH_KEY }}
         port: ${{ secrets.VPS_PORT || 22 }}
-        envs: REDIS_PASSWORD
+        envs: REDIS_PASSWORD,UNIDBG_ADMIN_PASSWORD
         script: |
             # ===== STEP 0: Free disk/memory FIRST, before anything else =====
             echo "=== Initial disk ==="
@@ -76,15 +77,43 @@ jobs:
             UNIDBG_DIR=/opt/unidbg
             UNIDBG_JAR="$UNIDBG_DIR/unidbg-boot-server.jar"
             PID_FILE="$UNIDBG_DIR/unidbg.pid"
-            JAR_URL="https://github.com/mtongle/fqnovel-unidbg/releases/download/v0.0.4/unidbg-boot-server-0.0.4.jar"
+            UNIDBG_VERSION="0.0.5"
+            UNIDBG_SHA256="b843cf007693ed0f27af61385992d7ce4668784938d8943a6a0ae4a30a5ed330"
+            JAR_URL="https://github.com/mtongle/fqnovel-unidbg/releases/download/v${UNIDBG_VERSION}/unidbg-boot-server-${UNIDBG_VERSION}.jar"
             mkdir -p "$UNIDBG_DIR"
-            
-            if [ ! -f "$UNIDBG_JAR" ]; then
-              echo "Downloading unidbg JAR..."
-              curl -fL --retry 3 -o "$UNIDBG_JAR" "$JAR_URL"
-              echo "JAR size: $(ls -lh $UNIDBG_JAR | awk '{print $5}')"
+
+            ADMIN_PASSWORD_FILE="$UNIDBG_DIR/admin-password"
+            if [ -n "${UNIDBG_ADMIN_PASSWORD:-}" ]; then
+              umask 077
+              printf '%s' "$UNIDBG_ADMIN_PASSWORD" > "$ADMIN_PASSWORD_FILE"
+            elif [ -s "$ADMIN_PASSWORD_FILE" ]; then
+              UNIDBG_ADMIN_PASSWORD=$(cat "$ADMIN_PASSWORD_FILE")
             else
-              echo "unidbg JAR exists ($(ls -lh $UNIDBG_JAR | awk '{print $5}'))"
+              umask 077
+              UNIDBG_ADMIN_PASSWORD=$(head -c 48 /dev/urandom | base64 | tr -d '\n')
+              printf '%s' "$UNIDBG_ADMIN_PASSWORD" > "$ADMIN_PASSWORD_FILE"
+            fi
+            if [ "${#UNIDBG_ADMIN_PASSWORD}" -lt 16 ] || [ "$UNIDBG_ADMIN_PASSWORD" = "admin123" ]; then
+              echo "UNIDBG_ADMIN_PASSWORD must be at least 16 characters and must not use the upstream default"
+              exit 1
+            fi
+            chmod 600 "$ADMIN_PASSWORD_FILE"
+            export APPLICATION_ADMIN_PASSWORD="$UNIDBG_ADMIN_PASSWORD"
+
+            INSTALLED_SHA256=""
+            if [ -f "$UNIDBG_JAR" ]; then
+              INSTALLED_SHA256=$(sha256sum "$UNIDBG_JAR" | awk '{print $1}')
+            fi
+            if [ "$INSTALLED_SHA256" != "$UNIDBG_SHA256" ]; then
+              echo "Downloading fqnovel-unidbg v${UNIDBG_VERSION}..."
+              UNIDBG_JAR_TMP="${UNIDBG_JAR}.download"
+              rm -f "$UNIDBG_JAR_TMP"
+              curl -fL --retry 3 -o "$UNIDBG_JAR_TMP" "$JAR_URL"
+              echo "${UNIDBG_SHA256}  ${UNIDBG_JAR_TMP}" | sha256sum -c -
+              mv -f "$UNIDBG_JAR_TMP" "$UNIDBG_JAR"
+              echo "Installed fqnovel-unidbg v${UNIDBG_VERSION} ($(ls -lh "$UNIDBG_JAR" | awk '{print $5}'))"
+            else
+              echo "fqnovel-unidbg v${UNIDBG_VERSION} already installed and verified"
             fi
             
             # Write unidbg config (connects to redis container on host network)

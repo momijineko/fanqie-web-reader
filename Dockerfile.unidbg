@@ -1,8 +1,19 @@
+FROM alpine:3.22 AS downloader
+
+ARG UNIDBG_VERSION=0.0.5
+ARG UNIDBG_SHA256=b843cf007693ed0f27af61385992d7ce4668784938d8943a6a0ae4a30a5ed330
+
+RUN apk add --no-cache ca-certificates curl \
+    && curl -fL --retry 3 \
+      -o /tmp/app.jar \
+      "https://gh-proxy.com/https://github.com/mtongle/fqnovel-unidbg/releases/download/v${UNIDBG_VERSION}/unidbg-boot-server-${UNIDBG_VERSION}.jar" \
+    && echo "${UNIDBG_SHA256}  /tmp/app.jar" | sha256sum -c -
+
 FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-ADD https://gh-proxy.com/https://github.com/mtongle/fqnovel-unidbg/releases/download/v0.0.4/unidbg-boot-server-0.0.4.jar app.jar
+COPY --from=downloader /tmp/app.jar app.jar
 
 EXPOSE 8099
 
