@@ -1,4 +1,4 @@
-FROM alpine:3.22 AS downloader
+FROM docker.m.daocloud.io/library/alpine:3.22 AS downloader
 
 ARG UNIDBG_VERSION=0.0.5
 ARG UNIDBG_SHA256=b843cf007693ed0f27af61385992d7ce4668784938d8943a6a0ae4a30a5ed330
@@ -9,7 +9,7 @@ RUN apk add --no-cache ca-certificates curl \
       "https://gh-proxy.com/https://github.com/mtongle/fqnovel-unidbg/releases/download/v${UNIDBG_VERSION}/unidbg-boot-server-${UNIDBG_VERSION}.jar" \
     && echo "${UNIDBG_SHA256}  /tmp/app.jar" | sha256sum -c -
 
-FROM eclipse-temurin:17-jre
+FROM docker.m.daocloud.io/library/eclipse-temurin:17-jre
 
 WORKDIR /app
 
