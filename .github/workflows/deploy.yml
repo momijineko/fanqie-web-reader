@@ -117,7 +117,7 @@ jobs:
             fi
             
             # Write unidbg config (connects to redis container on host network)
-            printf 'server:\n  port: 8099\nspring:\n  redis:\n    host: 127.0.0.1\n    port: 6379\n    password: %s\n    timeout: 2000\n    lettuce:\n      pool:\n        max-active: 4\n        max-idle: 2\n        min-idle: 0\napplication:\n  unidbg:\n    dynarmic: false\n    verbose: false\n    async: false\nfq:\n  api:\n    base-url: https://api5-normal-sinfonlineb.fqnovel.com\n    device-pool:\n      enabled: true\n      size: 1\n' "${REDIS_PASSWORD:-fanqie_unidbg_2026}" > "$UNIDBG_DIR/application.yml"
+            printf 'server:\n  port: 8099\nspring:\n  redis:\n    host: 127.0.0.1\n    port: 6379\n    password: %s\n    timeout: 2000\n    lettuce:\n      pool:\n        max-active: 4\n        max-idle: 2\n        min-idle: 0\napplication:\n  unidbg:\n    dynarmic: false\n    verbose: false\n    async: false\nfq:\n  api:\n    base-url: https://api5-normal-sinfonlineb.fqnovel.com\n    device-pool:\n      enabled: true\n      size: 1\nlogging:\n  level:\n    com.anjia.unidbgserver: INFO\n' "${REDIS_PASSWORD:-fanqie_unidbg_2026}" > "$UNIDBG_DIR/application.yml"
             
             # Clean up temp unidbg files from previous runs
             rm -rf /tmp/unidbg_* /tmp/jna*.tmp 2>/dev/null || true
