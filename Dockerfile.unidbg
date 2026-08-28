@@ -1,7 +1,7 @@
 FROM docker.m.daocloud.io/library/alpine:3.22 AS downloader
 
-ARG UNIDBG_VERSION=0.0.5
-ARG UNIDBG_SHA256=b843cf007693ed0f27af61385992d7ce4668784938d8943a6a0ae4a30a5ed330
+ARG UNIDBG_VERSION=0.0.6
+ARG UNIDBG_SHA256=505fa249c37365cde4bcaafcd433cc6e8af83fdfb1948a5b145ddc5a45293cfb
 
 RUN apk add --no-cache ca-certificates curl \
     && curl -fL --retry 3 \

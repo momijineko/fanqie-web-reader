@@ -1,5 +1,8 @@
 __pycache__/
 *.pyc
+.venv/
+target/
+.codely-cli/
 nul
 test_*
 decoded_output.txt
@@ -8,6 +11,8 @@ test_font_dl.woff2
 *.png
 unidbg/unidbg-boot-server.jar
 unidbg/
+jre/
+.jre_tmp/
 docs/fanqie-api.md
 docs/login-plan.md
 

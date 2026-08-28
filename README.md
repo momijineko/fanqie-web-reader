@@ -41,6 +41,19 @@
 
 ### 本地启动
 
+一键脚本（推荐）：
+
+- **Windows**：双击 `start.bat`（或在 cmd 中运行）
+- **macOS / Linux**：`bash start.sh`
+
+脚本会自动完成：创建 `.venv` 并安装依赖 → 检测 Java（缺失或版本 21+ 时**自动下载 Temurin 17 JRE 到 `jre/` 目录，约 45MB，不污染系统**）→ 下载并校验 unidbg jar（v0.0.6，**约 351MB**，存到 `unidbg/`，国内走 gh-proxy 加速）→ 后台启动 unidbg 并等待就绪 → 启动 Web 服务并打开浏览器。所有下载仅首次需要，之后直接复用。
+
+可用环境变量：`SKIP_UNIDBG=1` 跳过 unidbg（降级社区 API 数据源）、`SKIP_JRE=1` 跳过 JRE 自动下载（改用手动安装）。脚本会自动加载项目根目录的 `.env`（与 Docker 共用同一份配置，系统已设的变量优先）。
+
+> **Java 运行时（JRE 即可，无需 JDK）**：脚本会自动下载 Temurin 17 到项目 `jre/` 目录；也可手动安装（11 或 17，勿用 21+）。Redis 可选，仅全本下载类功能需要。重复运行脚本时若 8080 端口已被占用会直接提示，不会重复启动。
+
+手动方式（等效）：
+
 ```bash
 # 1. 克隆项目
 git clone https://github.com/momijineko/fanqie-web-reader.git
@@ -69,14 +82,15 @@ python server.py
 3. 点击路径以 `/api` 开头的请求 → Headers → Request Headers → 复制 `Cookie:` 行值
 4. 在应用"我的"页面粘贴 Cookie 完成登录
 
-### 段评功能
+### 数据源与段评
 
-段评默认使用 Mock 数据。如需真实数据，需部署 [fqnovel-unidbg](https://github.com/mtongle/fqnovel-unidbg)：
+搜索 / 详情 / 章节目录 / 正文的优先数据源是 [fqnovel-unidbg](https://github.com/mtongle/fqnovel-unidbg) 签名代理（番茄 App 协议，自带风控签名，不再依赖第三方社区 API 存活）；unidbg 不可用时自动回退到社区 API。段评同样依赖 unidbg：
 
 | 环境变量 | 默认值 | 说明 |
 |---|---|---|
-| `PARA_COMMENT_MOCK` | `true` | 设为 `false` 启用真实段评 |
-| `UNIDBG_API` | `http://127.0.0.1:8099` | unidbg 签名代理地址 |
+| `UNIDBG_API` | `http://127.0.0.1:8099` | unidbg 签名代理地址（搜索/详情/正文/段评） |
+| `PARA_COMMENT_MOCK` | `false` | **仅供开发调试**：没启动 unidbg 时预览段评格式/样式（假数据），日常使用与生产环境保持 `false` |
+| `COMMUNITY_API` | `http://101.35.133.34:5000,https://tt.sjmyzq.cn` | 备用社区 API，逗号分隔多实例按序轮询（unidbg 不可用时兜底） |
 | `UNIDBG_ADMIN_PASSWORD` | 无 | Docker 部署必填；可用 `openssl rand -base64 32` 生成 |
 
 ## 📁 项目结构
@@ -118,7 +132,7 @@ fanqie-web-reader/
 |---|---|---|
 | 端口 | `8080`（本地）/ `8199`（Docker） | 服务监听端口 |
 | `CORS_ORIGINS` | 本地常用端口 | 逗号分隔的允许来源；设为 `*` 则关闭凭证模式 |
-| `COMMUNITY_API` | `http://101.35.133.34:5000` | 社区 API 地址 |
+| `COMMUNITY_API` | `http://101.35.133.34:5000,https://tt.sjmyzq.cn` | 备用社区 API，逗号分隔多实例按序轮询（unidbg 不可用时兜底） |
 | `REDIS_PASSWORD` | `fanqie_unidbg_2026` | unidbg 使用的 Redis 密码（Python 端不直接使用） |
 | `UNIDBG_ADMIN_PASSWORD` | 无 | unidbg 管理后台密码，禁止使用上游默认值 `admin123` |
 | `LOG_LEVEL` | `INFO` | 日志级别 |
@@ -148,8 +162,8 @@ fanqie-web-reader/
 ## 🙏 致谢
 
 - [番茄小说](https://fanqienovel.com/) — 内容来源平台
-- 番茄小说社区 API — 上游接口服务
-- [fqnovel-unidbg](https://github.com/mtongle/fqnovel-unidbg) — 段评接口签名代理
+- [fqnovel-unidbg](https://github.com/mtongle/fqnovel-unidbg) — 主数据源与段评签名代理
+- 番茄小说社区 API — 备用上游接口服务
 - [FQToolBox](https://github.com/jackwd387/FQToolBox) — 作者信息接口参考
 - [Lucide](https://lucide.dev/) — 图标库
 - [FastAPI](https://fastapi.tiangolo.com/) — 后端框架
