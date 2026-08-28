@@ -77,8 +77,8 @@ jobs:
             UNIDBG_DIR=/opt/unidbg
             UNIDBG_JAR="$UNIDBG_DIR/unidbg-boot-server.jar"
             PID_FILE="$UNIDBG_DIR/unidbg.pid"
-            UNIDBG_VERSION="0.0.5"
-            UNIDBG_SHA256="b843cf007693ed0f27af61385992d7ce4668784938d8943a6a0ae4a30a5ed330"
+            UNIDBG_VERSION="0.0.6"
+            UNIDBG_SHA256="505fa249c37365cde4bcaafcd433cc6e8af83fdfb1948a5b145ddc5a45293cfb"
             JAR_URL="https://github.com/mtongle/fqnovel-unidbg/releases/download/v${UNIDBG_VERSION}/unidbg-boot-server-${UNIDBG_VERSION}.jar"
             mkdir -p "$UNIDBG_DIR"
 
