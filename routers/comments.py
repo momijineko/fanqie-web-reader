@@ -6,7 +6,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from shared import COMMUNITY_API, PARA_COMMENT_MOCK, UNIDBG_API, _fanqie_client, client, logger
+from shared import PARA_COMMENT_MOCK, UNIDBG_API, _fanqie_client, client, community_get, logger
 
 router = APIRouter()
 
@@ -34,12 +34,8 @@ async def comments(
         params = {"book_id": book_id, "offset": offset, "count": count}
         if chapter_id:
             params["chapter_id"] = chapter_id
-        r = await client.get(
-            f"{COMMUNITY_API}/api/comment",
-            params=params,
-        )
-        data = r.json()
-        if data.get("code") == 200:
+        data = await community_get("/api/comment", params)
+        if data is not None:
             inner = data.get("data") or {}
             if isinstance(inner, dict):
                 d2 = inner.get("data") or inner

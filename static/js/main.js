@@ -138,7 +138,7 @@ route('reader', async (q, app) => {
   appendedChapters = 0;
   const chapterId = d.chapters[idx].ChapterID;
   if (getContentCache(chapterId)) renderReader(app, bid, idx);
-  else { app.innerHTML = skeletonReader(); await fetchContent(chapterId); renderReader(app, bid, idx); }
+  else { app.innerHTML = skeletonReader(); await fetchContent(chapterId, bid); renderReader(app, bid, idx); }
 });
 
 route('comments', async (q, app) => {

@@ -58,7 +58,7 @@ async function fetchDetail(bid) {
   return p;
 }
 
-async function fetchContent(chapterId) {
+async function fetchContent(chapterId, bookId) {
   if (cache.content.has(chapterId)) return;
   if (inflight['c_'+chapterId]) return inflight['c_'+chapterId];
   const p = (async () => {
@@ -67,7 +67,8 @@ async function fetchContent(chapterId) {
       if (idbVal) { setContentCache(chapterId, idbVal); return; }
     } catch(e) {}
     try {
-      const r = await fetchWithTimeout(`${API}/api/content?chapter_id=${chapterId}`);
+      const bid = bookId || currentBookId || '';
+      const r = await fetchWithTimeout(`${API}/api/content?chapter_id=${chapterId}&book_id=${encodeURIComponent(bid)}`);
       const data = await r.json();
       if (data.code===200) setContentCache(chapterId, { paragraphs: data.data.Paragraphs||[], authorSpeak: data.data.AuthorSpeak||'' });
       else setContentCache(chapterId, { paragraphs: [], authorSpeak: '' });
@@ -163,8 +164,8 @@ function preloadAdjacent(bid, idx) {
     const ni = idx + i;
     if (ni < ch.chapters.length) {
       const id = ch.chapters[ni].ChapterID;
-      if (!getContentCache(id)) fetchContent(id);
+      if (!getContentCache(id)) fetchContent(id, bid);
     }
   }
-  if (idx > 0) { const id = ch.chapters[idx-1].ChapterID; if (!getContentCache(id)) fetchContent(id); }
+  if (idx > 0) { const id = ch.chapters[idx-1].ChapterID; if (!getContentCache(id)) fetchContent(id, bid); }
 }

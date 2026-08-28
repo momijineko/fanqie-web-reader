@@ -7,10 +7,18 @@ import httpx
 
 COOKIE_FILE = Path("user_cookie.json")
 
-COMMUNITY_API = os.environ.get("COMMUNITY_API", "http://101.35.133.34:5000")
-FANQIE_API = "https://api5-normal-sinfonlinec.fqnovel.com"
+# 社区 API 备用源：逗号分隔多实例，请求时按序轮询，任一实例复活即自动生效。
+# 允许配置为空（COMMUNITY_API=）——此时仅用 unidbg 数据源，回退层返回 502。
+COMMUNITY_APIS = [
+    u.strip() for u in os.environ.get(
+        "COMMUNITY_API",
+        "http://101.35.133.34:5000,https://tt.sjmyzq.cn",
+    ).split(",") if u.strip()
+]
 UNIDBG_API = os.environ.get("UNIDBG_API", "http://127.0.0.1:8099")
-PARA_COMMENT_MOCK = os.environ.get("PARA_COMMENT_MOCK", "true").lower() in ("true", "1", "yes")
+# 段评 Mock 仅供开发调试：没启动 unidbg 时预览段评的格式和样式用。
+# 生产/日常使用必须保持 false（默认），否则段评显示的是假数据。
+PARA_COMMENT_MOCK = os.environ.get("PARA_COMMENT_MOCK", "false").lower() in ("true", "1", "yes")
 
 logger = logging.getLogger("fanqie")
 
@@ -61,6 +69,22 @@ _fanqie_client: httpx.AsyncClient = httpx.AsyncClient(
     },
     follow_redirects=True,
 )
+
+
+async def community_get(path: str, params: dict) -> dict | None:
+    """按序请求各社区 API 实例（COMMUNITY_APIS），返回首个 code==200 的响应；全部失败返回 None。
+
+    单实例总超时 6s：避免 TCP 挂起（非拒绝）的实例把每个回退请求拖满 30s。
+    """
+    for base in COMMUNITY_APIS:
+        try:
+            r = await client.get(f"{base}{path}", params=params, timeout=6.0)
+            data = r.json()
+            if data.get("code") == 200:
+                return data
+        except Exception as e:
+            logger.info("社区 API %s%s 不可用: %s: %s", base, path, type(e).__name__, e)
+    return None
 
 
 def load_cookie() -> dict:

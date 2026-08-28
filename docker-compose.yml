@@ -40,7 +40,7 @@ services:
     environment:
       - PARA_COMMENT_MOCK=false
       - UNIDBG_API=http://unidbg:8099
-      - COMMUNITY_API=${COMMUNITY_API:-http://101.35.133.34:5000}
+      - COMMUNITY_API=${COMMUNITY_API:-http://101.35.133.34:5000,https://tt.sjmyzq.cn}
       - CORS_ORIGINS=${CORS_ORIGINS:-}
     restart: unless-stopped
     depends_on:
