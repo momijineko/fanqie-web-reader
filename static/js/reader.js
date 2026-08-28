@@ -5,9 +5,9 @@ function renderParas(paras, authorSpeak) {
     const text = paras[pi];
     if (!text) continue;
     const imgMatch = text.match(/^https?:\/\/\S+\.(jpg|jpeg|png|webp|gif)(\?\S*)?$/i);
-    if (imgMatch) { html += `<img class="content-img" src="${text}">`; continue; }
+    if (imgMatch) { html += `<img class="content-img" src="${safeImgUrl(text)}">`; continue; }
     const innerImgs = text.match(/<img[^>]+src="([^"]+)"[^>]*>/gi);
-    if (innerImgs) { innerImgs.forEach(imgTag => { const src = imgTag.match(/src="([^"]+)"/); if (src) html += `<img class="content-img" src="${src[1]}">`; }); continue; }
+    if (innerImgs) { innerImgs.forEach(imgTag => { const src = imgTag.match(/src="([^"]+)"/); if (src) html += `<img class="content-img" src="${safeImgUrl(src[1])}">`; }); continue; }
     html += `<div class="para-wrap" data-para-idx="${pi}"><p>${escapeHtml(text)}<span class="para-badge" data-para-idx="${pi}" onclick="event.stopPropagation();openParaComment(${pi})"></span></p></div>`;
   }
   if (authorSpeak) html += `<div class="author-speak"><i data-lucide="message-circle" width="14" height="14"></i> 作者说：${escapeHtml(authorSpeak)}</div>`;
@@ -176,7 +176,7 @@ function setupScrollAutoNext(bid, idx) {
       const indicator = $('autoNextIndicator');
       if (indicator) indicator.classList.remove('hidden');
       const nextChapterId = d.chapters[nextIdx].ChapterID;
-      if (!getContentCache(nextChapterId)) await fetchContent(nextChapterId);
+      if (!getContentCache(nextChapterId)) await fetchContent(nextChapterId, currentBookId);
       const nc = getContentCache(nextChapterId);
       if (nc && nc.paragraphs.length > 0) {
         const content = $('readerContent');
@@ -382,9 +382,9 @@ function pgCalculatePages() {
     const text = paras[pi];
     if (!text) continue;
     const imgMatch = text.match(/^https?:\/\/\S+\.(jpg|jpeg|png|webp|gif)(\?\S*)?$/i);
-    if (imgMatch) { paraHtmls.push(`<img class="content-img" src="${text}">`); continue; }
+    if (imgMatch) { paraHtmls.push(`<img class="content-img" src="${safeImgUrl(text)}">`); continue; }
     const innerImgs = text.match(/<img[^>]+src="([^"]+)"[^>]*>/gi);
-    if (innerImgs) { innerImgs.forEach(imgTag => { const src = imgTag.match(/src="([^"]+)"/); if (src) paraHtmls.push(`<img class="content-img" src="${src[1]}">`); }); continue; }
+    if (innerImgs) { innerImgs.forEach(imgTag => { const src = imgTag.match(/src="([^"]+)"/); if (src) paraHtmls.push(`<img class="content-img" src="${safeImgUrl(src[1])}">`); }); continue; }
     paraHtmls.push(`<div class="para-wrap" data-para-idx="${pi}"><p>${escapeHtml(text)}<span class="para-badge" data-para-idx="${pi}" onclick="event.stopPropagation();openParaComment(${pi})"></span></p></div>`);
   }
   if (authorSpeak) paraHtmls.push(`<div class="author-speak"><i data-lucide="message-circle" width="14" height="14"></i> 作者说：${escapeHtml(authorSpeak)}</div>`);
@@ -599,7 +599,7 @@ async function pgSwitchChapter(newIdx, startPageHint) {
       oldPageEl.style.opacity = '0.5';
       oldPageEl.style.pointerEvents = 'none';
     }
-    await fetchContent(chapterId);
+    await fetchContent(chapterId, currentBookId);
     if (oldPageEl) {
       oldPageEl.style.opacity = '';
       oldPageEl.style.pointerEvents = '';

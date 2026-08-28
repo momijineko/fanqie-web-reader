@@ -73,7 +73,7 @@ function renderResults(app) {
     const score = parseFloat(book.Score);
     const stars = score > 0 ? '<i data-lucide="star" width="12" height="12" style="vertical-align:-1px"></i>'+(score > 10 ? (score/10).toFixed(1) : score.toFixed(1)) : '';
     html += `<div class="book-card" onclick="navigate('detail?book_id=${book.BookID}')">
-      <img class="book-cover" src="${book.ThumbUrl||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'">
+      <img class="book-cover" src="${safeImgUrl(book.ThumbUrl)||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'">
       <div class="book-info">
         <div class="book-title">${escapeHtml(book.Name||'')}${status?`<span class="status-badge ${status==='连载中'?'ongoing':'finished'}">${status}</span>`:''}</div>
         <div class="book-author">${escapeHtml(book.Author||'')} ${stars?'· '+stars:''}</div>
@@ -470,18 +470,18 @@ function _renderCloudShelf(rh) {
     if (item.type === 'book') {
       const b = item.data;
       const progressHtml = `<div class="progress-text">${b.LastReadChapter ? escapeHtml(b.LastReadChapter) : '&nbsp;'}</div>`;
-      html += `<div class="shelf-grid-item" onclick="navigate('detail?book_id=${b.BookID}')" data-book-id="${b.BookID}" data-name="${escapeHtml(b.Name||'')}"><div class="cover-wrap">${bookBadge(b)}<img src="${b.ThumbUrl||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"></div><div class="name">${escapeHtml(b.Name||'')}</div>${progressHtml}</div>`;
+      html += `<div class="shelf-grid-item" onclick="navigate('detail?book_id=${b.BookID}')" data-book-id="${b.BookID}" data-name="${escapeHtml(b.Name||'')}"><div class="cover-wrap">${bookBadge(b)}<img src="${safeImgUrl(b.ThumbUrl)||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"></div><div class="name">${escapeHtml(b.Name||'')}</div>${progressHtml}</div>`;
     } else {
       const gid = item.gid, g = item.g;
       const previews = g.books.slice(0, 4);
       let coverInner = '';
       if (previews.length === 1) {
-        coverInner = `<img src="${previews[0].ThumbUrl||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'">`;
+        coverInner = `<img src="${safeImgUrl(previews[0].ThumbUrl)||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'">`;
       } else {
         coverInner = '<div class="folder-cover-grid">';
         for (let i = 0; i < 4; i++) {
           if (previews[i]) {
-            coverInner += `<img src="${previews[i].ThumbUrl||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'">`;
+            coverInner += `<img src="${safeImgUrl(previews[i].ThumbUrl)||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'">`;
           } else {
             coverInner += '<div class="folder-cover-empty"></div>';
           }
@@ -577,7 +577,7 @@ async function renderProfile(app) {
 
   const u = _profileUser;
   const avatarHtml = u.avatar_url
-    ? `<img class="profile-avatar-img" src="${escapeHtml(u.avatar_url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="profile-avatar-placeholder" style="display:none"><i data-lucide="user" width="48" height="48"></i></div>`
+    ? `<img class="profile-avatar-img" src="${safeImgUrl(u.avatar_url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="profile-avatar-placeholder" style="display:none"><i data-lucide="user" width="48" height="48"></i></div>`
     : `<div class="profile-avatar-placeholder"><i data-lucide="user" width="48" height="48"></i></div>`;
 
   app.innerHTML = `<div class="profile-page view">
@@ -692,7 +692,7 @@ function openShelfFolder(gid) {
   let booksHtml = '';
   for (const b of g.books) {
     const progressHtml = `<div class="progress-text">${b.LastReadChapter ? escapeHtml(b.LastReadChapter) : '&nbsp;'}</div>`;
-    booksHtml += `<div class="shelf-grid-item" onclick="closeShelfFolder();navigate('detail?book_id=${b.BookID}')" data-book-id="${b.BookID}" data-name="${escapeHtml(b.Name||'')}"><div class="cover-wrap">${bookBadge(b)}<img src="${b.ThumbUrl||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"></div><div class="name">${escapeHtml(b.Name||'')}</div>${progressHtml}</div>`;
+    booksHtml += `<div class="shelf-grid-item" onclick="closeShelfFolder();navigate('detail?book_id=${b.BookID}')" data-book-id="${b.BookID}" data-name="${escapeHtml(b.Name||'')}"><div class="cover-wrap">${bookBadge(b)}<img src="${safeImgUrl(b.ThumbUrl)||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"></div><div class="name">${escapeHtml(b.Name||'')}</div>${progressHtml}</div>`;
   }
   const overlay = document.createElement('div');
   overlay.className = 'shelf-folder-overlay';
@@ -854,6 +854,7 @@ async function doCookieLogin() {
         saveCachedUser(_profileUser);
         _autoLoginPending = false;
         _loadOnlineShelf();
+        renderProfile($('app'));
         showToast('登录成功 · 云端与本地书架独立存储');
       } else {
         showToast('Cookie 无效，请检查是否已登录');
@@ -926,18 +927,18 @@ function renderDetail(app, bid) {
       coverHtml = `<div class="cover-flip" id="coverFlip" onclick="this.classList.toggle('flipped');event.stopPropagation()">
         <div class="cover-flip-inner">
           <div class="cover-flip-front">
-            <img src="${cover||FALLBACK_IMG}" onerror="this.src='${FALLBACK_IMG}'">
+            <img src="${safeImgUrl(cover)||FALLBACK_IMG}" onerror="this.src='${FALLBACK_IMG}'">
             <span class="cover-flip-badge">推广</span>
           </div>
           <div class="cover-flip-back">
-            <img id="originalCoverImg" src="${cover||FALLBACK_IMG}" onerror="this.src='${FALLBACK_IMG}'">
+            <img id="originalCoverImg" src="${safeImgUrl(detail.original_thumb_url)||safeImgUrl(cover)||FALLBACK_IMG}" onerror="this.src='${FALLBACK_IMG}'">
             <span class="cover-flip-badge">原始</span>
           </div>
         </div>
         <span class="cover-flip-hint">⇄</span>
       </div>`;
     } else {
-      coverHtml = `<img class="book-detail-cover" src="${cover||FALLBACK_IMG}" onerror="this.src='${FALLBACK_IMG}'">`;
+      coverHtml = `<img class="book-detail-cover" src="${safeImgUrl(cover)||FALLBACK_IMG}" onerror="this.src='${FALLBACK_IMG}'">`;
     }
     html += `<div class="book-detail-header">
       ${coverHtml}
@@ -973,7 +974,7 @@ function renderDetail(app, bid) {
 
   app.innerHTML = html;
   // Setup cover flip for aliased books
-  if (hasAlias && d.authorId) {
+  if (hasAlias && d.authorId && !detail.original_thumb_url) {
     fetchOriginalCover(d.authorId, bid);
   }
   refreshIcons(app);
@@ -1010,7 +1011,7 @@ async function fetchAuthorBooks(author, currentBid, authorId) {
       if (section) section.style.display = 'none';
       return;
     }
-    scroll.innerHTML = others.map(b => `<div class="related-item" onclick="navigate('detail?book_id=${b.BookID}')"><img src="${b.ThumbUrl||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"><div class="name">${escapeHtml(b.Name||'')}</div>${b.ShortName?`<div class="related-short-name">${escapeHtml(b.ShortName)}</div>`:''}</div>`).join('');
+    scroll.innerHTML = others.map(b => `<div class="related-item" onclick="navigate('detail?book_id=${b.BookID}')"><img src="${safeImgUrl(b.ThumbUrl)||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"><div class="name">${escapeHtml(b.Name||'')}</div>${b.ShortName?`<div class="related-short-name">${escapeHtml(b.ShortName)}</div>`:''}</div>`).join('');
   } catch(e) {
     scroll.innerHTML = '<div style="padding:12px 0;color:var(--text-muted);font-size:13px">加载失败</div>';
   }
@@ -1027,9 +1028,9 @@ function renderChapterItems(chapters, bid, lastRead) {
       currentVol = vol;
       let endI = i;
       for (let j = i+1; j < chapters.length; j++) { if ((chapters[j].volume_name||'默认') === vol) endI = j; else break; }
-      html += `<div class="volume-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.classList.toggle('collapsed')"><span class="arrow"><i data-lucide="chevron-down" width="10" height="10"></i></span>${escapeHtml(vol)}</div><div class="volume-body">`;
+      html += `<div class="volume-group"><div class="volume-header" onclick="this.nextElementSibling.classList.toggle('collapsed');this.classList.toggle('collapsed')"><span class="arrow"><i data-lucide="chevron-down" width="10" height="10"></i></span>${escapeHtml(vol)}</div><div class="volume-body">`;
       for (let k = i; k <= endI; k++) html += chapterItemHtml(chapters[k], k, bid, lastRead);
-      html += '</div>';
+      html += '</div></div>';
       i = endI;
     }
   }
@@ -1084,7 +1085,7 @@ async function renderAuthorPage(app, authorId, authorName) {
         }
         const avatar = app.querySelector('.author-avatar');
         if (avatar && data.author_avatar) {
-          avatar.innerHTML = `<img src="${data.author_avatar}" onerror="this.parentElement.innerHTML='<i data-lucide=\\'user\\' width=\\'36\\' height=\\'36\\'></i>'">`;
+          avatar.innerHTML = `<img src="${safeImgUrl(data.author_avatar)}" onerror="this.parentElement.innerHTML='<i data-lucide=\\'user\\' width=\\'36\\' height=\\'36\\'></i>'">`;
         }
         const nameEl = app.querySelector('.author-name');
         if (nameEl && data.author_name) nameEl.textContent = data.author_name;
@@ -1120,7 +1121,7 @@ async function renderAuthorPage(app, authorId, authorName) {
       const stars = score > 0 ? '<i data-lucide="star" width="12" height="12" style="vertical-align:-1px"></i>'+(score > 10 ? (score/10).toFixed(1) : score.toFixed(1)) : '';
       const readText = book.ReadCountText || (book.ReadCount ? book.ReadCount+'人在读' : '');
       return `<div class="book-card" onclick="navigate('detail?book_id=${book.BookID}')">
-        <img class="book-cover" src="${book.ThumbUrl||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'">
+        <img class="book-cover" src="${safeImgUrl(book.ThumbUrl)||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'">
         <div class="book-info">
           <div class="book-title">${escapeHtml(book.Name||'')}${status?`<span class="status-badge ${status==='连载中'?'ongoing':'finished'}">${status}</span>`:''}</div>
           ${book.ShortName?`<div class="book-short-name">又名：${escapeHtml(book.ShortName)}</div>`:''}
@@ -1175,7 +1176,7 @@ async function fetchOriginalCover(authorId, bid) {
       const book = data.data.find(b => String(b.BookID) === String(bid));
       if (book && book.ThumbUrl) {
         const img = document.getElementById('originalCoverImg');
-        if (img) img.src = book.ThumbUrl;
+        if (img) img.src = safeImgUrl(book.ThumbUrl) || FALLBACK_IMG;
       }
     }
   } catch (e) {}

@@ -146,8 +146,8 @@
 .chapter-slider-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; min-width: 50px; text-align: center; }
 
 /* Volume group */
-.volume-group { }
-.volume-header { padding: var(--sp-2) var(--sp-4); font-size: var(--fs-sm); font-weight: 700; color: var(--text-secondary); background: var(--badge-bg); cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.volume-group { position: relative; }
+.volume-header { position: sticky; top: 0; z-index: 5; padding: var(--sp-2) var(--sp-4); font-size: var(--fs-sm); font-weight: 700; color: var(--text-secondary); background: var(--badge-bg); cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 1px 0 var(--border); }
 .volume-header .arrow { transition: transform 0.2s; font-size: 10px; }
 .volume-header.collapsed .arrow { transform: rotate(-90deg); }
 .volume-body { overflow: hidden; }
