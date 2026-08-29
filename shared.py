@@ -57,8 +57,12 @@ def cors_origins() -> list[str]:
     return [o.strip() for o in raw.split(",") if o.strip()]
 
 
+# trust_env=False：忽略 HTTP_PROXY/ALL_PROXY 等代理环境变量。本应用全部上游
+# （unidbg、社区 API、番茄 CDN/passport）均为国内直连可达，而用户机器上的全局
+# 代理变量会把发往 127.0.0.1 unidbg 的请求也劫持进代理，得到 502 空响应。
 client: httpx.AsyncClient = httpx.AsyncClient(
     timeout=30.0,
+    trust_env=False,
     headers={
         "User-Agent": "Mozilla/5.0 (Linux; Android 9; SM-G960F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
     },
@@ -67,6 +71,7 @@ client: httpx.AsyncClient = httpx.AsyncClient(
 
 _fanqie_client: httpx.AsyncClient = httpx.AsyncClient(
     timeout=30.0,
+    trust_env=False,
     headers={
         "User-Agent": "com.dragon.read/6.5.3.32.3 (Android 9)",
         "Content-Type": "application/json",

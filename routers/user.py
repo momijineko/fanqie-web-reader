@@ -78,6 +78,7 @@ _login_sessions: dict[str, dict] = {}
 def _new_login_client() -> httpx.AsyncClient:
     return httpx.AsyncClient(
         timeout=15.0,
+        trust_env=False,  # passport 同样国内直连，见 shared.py 中的说明
         headers={
             "User-Agent": web_headers()["User-Agent"],
             "Referer": "https://fanqienovel.com/",

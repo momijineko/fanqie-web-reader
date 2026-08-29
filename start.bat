@@ -21,6 +21,12 @@ set UNIDBG_PORT=8099
 set SERVER_PORT=8080
 set JAR=unidbg\unidbg-boot-server-%UNIDBG_VERSION%.jar
 
+rem ---------- Proxy env notice ----------
+rem Python upstream clients ignore HTTP_PROXY etc. (trust_env=False); all upstreams go direct.
+if defined HTTP_PROXY echo [note] Proxy env var HTTP_PROXY detected - intentionally ignored, upstream connections go direct.
+if defined HTTPS_PROXY echo [note] Proxy env var HTTPS_PROXY detected - intentionally ignored, upstream connections go direct.
+if defined ALL_PROXY echo [note] Proxy env var ALL_PROXY detected - intentionally ignored, upstream connections go direct.
+
 where curl >nul 2>nul || (echo [fail] curl is required & goto :end_fail)
 
 rem ---------- Python & venv ----------
