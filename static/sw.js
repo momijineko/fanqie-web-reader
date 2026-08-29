@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fanqie-11';
+const CACHE_NAME = 'fanqie-14';
 const IMG_CACHE = 'fanqie-imgs';
 const STATIC_ASSETS = [
   '/',
@@ -18,7 +18,13 @@ const STATIC_ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(STATIC_ASSETS)).catch(() => {}));
+  // cache: 'reload' 强制绕过 HTTP 缓存取最新文件——否则文件久未更新时
+  // 浏览器启发式缓存会把旧内容灌进新 CACHE_NAME（换名也白换）
+  e.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(c => c.addAll(STATIC_ASSETS.map(u => new Request(u, { cache: 'reload' }))))
+      .catch(() => {})
+  );
   self.skipWaiting();
 });
 

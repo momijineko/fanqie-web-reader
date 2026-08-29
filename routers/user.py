@@ -1,5 +1,7 @@
 import time
+import uuid
 
+import httpx
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
@@ -38,7 +40,10 @@ def _require_cookie() -> str | None:
 
 @router.post("/api/user/cookie")
 async def save_user_cookie(body: CookiePayload):
-    save_cookie(body.cookie.strip())
+    raw = body.cookie.strip()
+    # 允许只贴 sessionid 值（不含 "=" 时按 sessionid 处理）
+    cookie = raw if "=" in raw else f"sessionid={raw}"
+    save_cookie(cookie)
     return {"code": 200, "msg": "saved"}
 
 
@@ -47,6 +52,167 @@ async def delete_user_cookie():
     if COOKIE_FILE.exists():
         COOKIE_FILE.unlink()
     return {"code": 200, "msg": "deleted"}
+
+
+# ===== 扫码登录（番茄官网同源 passport，纯 Web 请求，无需 unidbg 签名）=====
+# 流程：/passport/web/get_qrcode/ 出码 → /passport/web/check_qrconnect/ 轮询 →
+# 确认后跟随 redirect_url 收 Set-Cookie → jar 里的 cookie 即登录态，复用 save_cookie。
+# 实测（2026-08）约束：aid 必须是 2503（1967 会"该应用无权限"）；参数用 next 而非 service；
+# 全程无验证码；响应中的 captcha 字段非空时表示上游加了人机校验，直接报错回退 Cookie 粘贴。
+_PASSPORT_QUERY = {
+    "aid": "2503",
+    "app_name": "novelapp",
+    "version_code": "57700",
+    "device_platform": "web",
+    "channel": "novel",
+    "sdk_version": "1.6.1",
+    "passport_sdk_version": "2.0.0",
+    "new_user": "0",
+}
+_NEXT_URL = "https://fanqienovel.com/"
+_LOGIN_SESSION_TTL = 300.0
+
+_login_sessions: dict[str, dict] = {}
+
+
+def _new_login_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        timeout=15.0,
+        headers={
+            "User-Agent": web_headers()["User-Agent"],
+            "Referer": "https://fanqienovel.com/",
+            "Origin": "https://fanqienovel.com",
+            "Accept": "application/json, text/plain, */*",
+        },
+        follow_redirects=True,
+    )
+
+
+async def _close_login_session(session_id: str):
+    sess = _login_sessions.pop(session_id, None)
+    if sess:
+        try:
+            await sess["client"].aclose()
+        except Exception:
+            pass
+
+
+async def _sweep_login_sessions():
+    now = time.time()
+    for sid in [sid for sid, s in _login_sessions.items() if now - s["ts"] > _LOGIN_SESSION_TTL]:
+        await _close_login_session(sid)
+
+
+async def _finalize_qr_login(sess: dict, redirect_url: str) -> str:
+    c = sess["client"]
+    for url in [u for u in (redirect_url, _NEXT_URL) if u]:
+        try:
+            await c.get(url, headers={"Accept": "text/html,application/json"})
+        except Exception as e:
+            logger.info("扫码登录跟随跳转失败 %s: %s", url, type(e).__name__)
+    cookie_map: dict[str, str] = {}
+    for ck in c.cookies.jar:
+        # 只收番茄域的 cookie：redirect 链上可能途经其他域，不该混进登录态
+        dom = (ck.domain or "").lstrip(".")
+        if ck.value is None or not (dom == "fanqienovel.com" or dom.endswith(".fanqienovel.com")):
+            continue
+        cookie_map[ck.name] = ck.value
+    cookie_str = "; ".join(f"{k}={v}" for k, v in cookie_map.items())
+    if "sessionid" in cookie_str:
+        save_cookie(cookie_str)
+    return cookie_str
+
+
+@router.post("/api/user/login/qrcode/start")
+async def login_qrcode_start():
+    await _sweep_login_sessions()
+    c = _new_login_client()
+    try:
+        r = await c.get(
+            "https://fanqienovel.com/passport/web/get_qrcode/",
+            params={"next": _NEXT_URL, **_PASSPORT_QUERY},
+        )
+        data = r.json()
+    except Exception as e:
+        await c.aclose()
+        logger.warning("get_qrcode 请求失败: %s", e, exc_info=True)
+        return {"code": 500, "msg": f"upstream error: {type(e).__name__}"}
+    d = data.get("data") or data
+    if d.get("captcha"):
+        await c.aclose()
+        return {"code": 502, "msg": "passport 要求人机校验，请改用 Cookie 粘贴登录"}
+    if d.get("error_code") not in (0, None, "0"):
+        await c.aclose()
+        return {"code": 502, "msg": d.get("description") or f"passport error {d.get('error_code')}"}
+    token = str(d.get("token") or d.get("qr_token") or "")
+    if not token:
+        await c.aclose()
+        return {"code": 502, "msg": "missing qrcode token"}
+    qrcode_b64 = str(d.get("qrcode") or "")
+    session_id = uuid.uuid4().hex
+    _login_sessions[session_id] = {
+        "client": c,
+        "token": token,
+        "ts": time.time(),
+    }
+    return {
+        "code": 200,
+        "data": {
+            "session_id": session_id,
+            "qrcode": f"data:image/png;base64,{qrcode_b64}" if qrcode_b64 else "",
+            "qrcode_index_url": str(d.get("qrcode_index_url") or ""),
+            "expire_time": d.get("expire_time", 0),
+        },
+        "msg": "success",
+    }
+
+
+@router.get("/api/user/login/qrcode/poll")
+async def login_qrcode_poll(session_id: str):
+    sess = _login_sessions.get(session_id)
+    if not sess:
+        return {"code": 404, "msg": "session expired", "data": {"status": "expired"}}
+    sess["ts"] = time.time()
+    try:
+        r = await sess["client"].get(
+            "https://fanqienovel.com/passport/web/check_qrconnect/",
+            params={"next": _NEXT_URL, "token": sess["token"], **_PASSPORT_QUERY},
+        )
+        d = r.json().get("data") or {}
+    except Exception as e:
+        # 网络抖动按继续等待处理，前端下一轮重试
+        logger.warning("check_qrconnect 请求失败: %s", e)
+        return {"code": 200, "data": {"status": "waiting"}}
+    status = str(d.get("status") or "").lower()
+    redirect_url = str(d.get("redirect_url") or d.get("redirectUrl") or d.get("url") or d.get("next_url") or "")
+    if d.get("captcha"):
+        await _close_login_session(session_id)
+        return {"code": 200, "data": {"status": "failed"}, "msg": "passport 要求人机校验，请改用 Cookie 粘贴登录"}
+    if redirect_url or status in ("confirmed", "success", "done", "ok"):
+        try:
+            cookie_str = await _finalize_qr_login(sess, redirect_url)
+        except Exception as e:
+            # 落盘失败等异常不向上抛：返回 failed 引导兜底，同时确保会话关闭
+            logger.warning("扫码登录 finalize 失败: %s", e, exc_info=True)
+            cookie_str = ""
+        finally:
+            await _close_login_session(session_id)
+        if "sessionid" not in cookie_str:
+            return {
+                "code": 200,
+                "data": {"status": "failed"},
+                "msg": "扫码已确认，但未能建立会话，请改用 Cookie 粘贴登录",
+            }
+        return {"code": 200, "data": {"status": "success"}}
+    if d.get("error_code") not in (0, None, "0"):
+        await _close_login_session(session_id)
+        return {
+            "code": 200,
+            "data": {"status": "expired"},
+            "msg": d.get("description") or "二维码已过期，请刷新重试",
+        }
+    scanned = status not in ("", "new", "init")
+    return {"code": 200, "data": {"status": "scanned" if scanned else "waiting"}}
 
 
 @router.get("/api/user/info")

@@ -219,4 +219,15 @@
 .modal-actions .btn-outline { padding: 10px 24px; background: var(--card-bg); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-pill); font-size: 14px; cursor: pointer; flex: none; }
 .modal-actions .btn-outline:active { background: var(--badge-bg); }
 
+/* 登录弹窗：扫码 / Cookie 双 Tab */
+.login-tabs { display: flex; gap: 8px; margin: 12px 0 16px; }
+.login-tab { flex: 1; padding: 9px 0; border-radius: var(--radius-pill); border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 14px; cursor: pointer; }
+.login-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+.qr-login-box { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 4px 0; }
+.qr-img-wrap { width: 208px; height: 208px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.qr-img { width: 192px; height: 192px; }
+.qr-loading { font-size: 13px; color: var(--text-secondary); }
+.qr-status { font-size: 13px; color: var(--text-secondary); text-align: center; line-height: 1.5; }
+.qr-refresh { padding: 7px 20px !important; font-size: 13px !important; }
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }/* HMR test */

@@ -562,8 +562,8 @@ async function renderProfile(app) {
         <div class="profile-section-title">账号</div>
         <div class="profile-section-group">
           <div class="profile-setting-item" onclick="showCookieModal()">
-            <i data-lucide="key" width="18" height="18"></i>
-            <span>Cookie 登录</span>
+            <i data-lucide="qr-code" width="18" height="18"></i>
+            <span>扫码登录</span>
             <i data-lucide="chevron-right" width="16" height="16" class="profile-arrow"></i>
           </div>
         </div>
@@ -593,8 +593,8 @@ async function renderProfile(app) {
       <div class="profile-section-title">账号</div>
       <div class="profile-section-group">
         <div class="profile-setting-item" onclick="showCookieModal()">
-          <i data-lucide="key" width="18" height="18"></i>
-          <span>更新 Cookie</span>
+          <i data-lucide="qr-code" width="18" height="18"></i>
+          <span>更新登录</span>
           <i data-lucide="chevron-right" width="16" height="16" class="profile-arrow"></i>
         </div>
       </div>
@@ -797,39 +797,161 @@ function showCookieModal() {
   overlay.id = 'cookieModal';
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `<div class="modal-content">
-    <div class="modal-title">Cookie 登录</div>
-    <div class="modal-guide">
-      <div class="modal-step">
-        <div class="modal-step-num">1</div>
-        <div>在浏览器打开 <a href="https://fanqienovel.com" target="_blank" rel="noopener">fanqienovel.com</a> 并登录账号</div>
-      </div>
-      <div class="modal-step">
-        <div class="modal-step-num">2</div>
-        <div>按 <kbd>F12</kbd> 打开开发者工具 → <b>Network</b> 标签 → 刷新页面</div>
-      </div>
-      <div class="modal-step">
-        <div class="modal-step-num">3</div>
-        <div>点击 <b>Network</b> 列表中路径以 <code>/api</code> 开头的请求 → <b>Headers</b> → <b>Request Headers</b> → 找到 <code>Cookie:</code> 行 → 复制其值</div>
-      </div>
-      <div class="modal-step">
-        <div class="modal-step-num">4</div>
-        <div>将复制的完整 Cookie 字符串粘贴到下方</div>
-      </div>
-      <div class="modal-tip">提示：Cookie 仅保存在你本地服务端，不会上传第三方。登录后可在「我的」页面查看在线书架。</div>
+    <div class="modal-title">登录账号</div>
+    <div class="login-tabs">
+      <button class="login-tab active" id="loginTabQr" onclick="switchLoginTab('qr')">扫码登录</button>
+      <button class="login-tab" id="loginTabCookie" onclick="switchLoginTab('cookie')">Cookie 粘贴</button>
     </div>
-    <textarea id="cookieInput" class="modal-input" placeholder="粘贴完整 Cookie 字符串（以 key=value; key2=value2 格式）..." rows="4"></textarea>
-    <div class="modal-actions">
-      <button class="btn-outline" onclick="closeCookieModal()">取消</button>
-      <button class="btn-primary" onclick="doCookieLogin()">登录</button>
+    <div id="qrPane">
+      <div class="qr-login-box">
+        <div class="qr-img-wrap" id="qrImgWrap"><div class="qr-loading">正在获取二维码...</div></div>
+        <div class="qr-status" id="qrStatus">打开抖音 / 番茄小说 App 扫码，并在手机上确认登录</div>
+        <button class="btn-outline qr-refresh" id="qrRefreshBtn" style="display:none" onclick="startQrLogin()">刷新二维码</button>
+      </div>
+    </div>
+    <div id="cookiePane" style="display:none">
+      <div class="modal-guide">
+        <div class="modal-step">
+          <div class="modal-step-num">1</div>
+          <div>在浏览器打开 <a href="https://fanqienovel.com" target="_blank" rel="noopener">fanqienovel.com</a> 并登录账号</div>
+        </div>
+        <div class="modal-step">
+          <div class="modal-step-num">2</div>
+          <div>按 <kbd>F12</kbd> 打开开发者工具 → <b>Network</b> 标签 → 刷新页面</div>
+        </div>
+        <div class="modal-step">
+          <div class="modal-step-num">3</div>
+          <div>点击 <b>Network</b> 列表中路径以 <code>/api</code> 开头的请求 → <b>Headers</b> → <b>Request Headers</b> → 找到 <code>Cookie:</code> 行 → 复制其值</div>
+        </div>
+        <div class="modal-step">
+          <div class="modal-step-num">4</div>
+          <div>将复制的完整 Cookie 字符串（或仅 <code>sessionid</code> 的值）粘贴到下方</div>
+        </div>
+        <div class="modal-tip">提示：Cookie 仅保存在你本地服务端，不会上传第三方。扫码不可用时的兜底方案。</div>
+      </div>
+      <textarea id="cookieInput" class="modal-input" placeholder="粘贴完整 Cookie 字符串（或仅 sessionid 值）..." rows="4"></textarea>
+      <div class="modal-actions">
+        <button class="btn-outline" onclick="closeCookieModal()">取消</button>
+        <button class="btn-primary" onclick="doCookieLogin()">登录</button>
+      </div>
     </div>
   </div>`;
   overlay.addEventListener('click', (e) => { if (e.target === overlay) closeCookieModal(); });
   document.body.appendChild(overlay);
+  startQrLogin();
+}
+
+function switchLoginTab(tab) {
+  const qr = $('qrPane'), ck = $('cookiePane');
+  if (!qr || !ck) return;
+  const qrOn = tab === 'qr';
+  qr.style.display = qrOn ? '' : 'none';
+  ck.style.display = qrOn ? 'none' : '';
+  $('loginTabQr').classList.toggle('active', qrOn);
+  $('loginTabCookie').classList.toggle('active', !qrOn);
+  if (qrOn) {
+    // 离开过扫码 Tab 的话定时器已被清掉，回来自动重新出码
+    if (!_qrPollTimer) startQrLogin();
+  } else {
+    stopQrPoll();
+    _qrSessionId = null;
+  }
 }
 
 function closeCookieModal() {
+  stopQrPoll();
+  _qrSessionId = null;
   const m = $('cookieModal');
   if (m) m.remove();
+}
+
+// ===== 扫码登录：start 出码 → 2s 轮询 poll → success 后走统一登录后流程 =====
+let _qrPollTimer = null;
+let _qrSessionId = null;
+
+function stopQrPoll() {
+  if (_qrPollTimer) { clearInterval(_qrPollTimer); _qrPollTimer = null; }
+}
+
+async function startQrLogin() {
+  stopQrPoll();
+  _qrSessionId = null;
+  const wrap = $('qrImgWrap'), st = $('qrStatus'), rb = $('qrRefreshBtn');
+  if (!wrap) return;
+  rb.style.display = 'none';
+  wrap.innerHTML = '<div class="qr-loading">正在获取二维码...</div>';
+  st.textContent = '打开抖音 / 番茄小说 App 扫码，并在手机上确认登录';
+  try {
+    const r = await fetch(`${API}/api/user/login/qrcode/start`, { method: 'POST' });
+    const d = await r.json();
+    if (!$('cookieModal')) return; // 出码期间弹窗已被关掉，别再起轮询
+    if (d.code !== 200 || !d.data || !d.data.qrcode) {
+      wrap.innerHTML = '<div class="qr-loading">二维码获取失败</div>';
+      st.textContent = d.msg || '服务暂时不可用，可切换到 Cookie 粘贴登录';
+      rb.style.display = '';
+      return;
+    }
+    _qrSessionId = d.data.session_id;
+    wrap.innerHTML = `<img class="qr-img" src="${d.data.qrcode}" alt="登录二维码">`;
+    let polls = 0;
+    _qrPollTimer = setInterval(async () => {
+      if (!$('cookieModal')) { stopQrPoll(); _qrSessionId = null; return; }
+      if (!_qrSessionId) { stopQrPoll(); return; }
+      if (++polls > 120) {
+        stopQrPoll(); _qrSessionId = null;
+        wrap.innerHTML = '<div class="qr-loading">等待超时</div>';
+        st.textContent = '长时间未扫码，请刷新二维码';
+        rb.style.display = '';
+        return;
+      }
+      try {
+        const pr = await fetch(`${API}/api/user/login/qrcode/poll?session_id=${encodeURIComponent(_qrSessionId)}`);
+        const pd = await pr.json();
+        const s = pd.data && pd.data.status;
+        if (s === 'success') {
+          stopQrPoll(); _qrSessionId = null;
+          st.textContent = '登录成功，正在同步书架...';
+          await _afterLoginSuccess('扫码登录成功');
+        } else if (s === 'scanned') {
+          st.textContent = '扫码成功，请在手机上点击「确认登录」';
+        } else if (s === 'expired' || pr.status === 404) {
+          stopQrPoll(); _qrSessionId = null;
+          wrap.innerHTML = '<div class="qr-loading">二维码已过期</div>';
+          st.textContent = '二维码已过期，请刷新重试';
+          rb.style.display = '';
+        } else if (s === 'failed') {
+          stopQrPoll(); _qrSessionId = null;
+          wrap.innerHTML = '<div class="qr-loading">登录未完成</div>';
+          st.textContent = pd.msg || '未能建立会话，请改用 Cookie 粘贴登录';
+          rb.style.display = '';
+        }
+      } catch(e) {}
+    }, 2000);
+  } catch(e) {
+    wrap.innerHTML = '<div class="qr-loading">网络错误</div>';
+    st.textContent = '获取二维码失败，请重试或改用 Cookie 粘贴登录';
+    rb.style.display = '';
+  }
+}
+
+// 登录态校验 + 书架同步 + 我的页刷新（扫码 / Cookie 两种方式共用）
+async function _afterLoginSuccess(toastMsg, failMsg) {
+  closeCookieModal();
+  try {
+    const infoR = await fetch(`${API}/api/user/info`);
+    const infoData = await infoR.json();
+    if (infoData.code === 200 && infoData.data) {
+      _profileUser = infoData.data;
+      saveCachedUser(_profileUser);
+      _autoLoginPending = false;
+      _loadOnlineShelf();
+      renderProfile($('app'));
+      showToast(toastMsg + ' · 云端与本地书架独立存储');
+      return;
+    }
+    await fetch(`${API}/api/user/cookie`, { method: 'DELETE' });
+  } catch(e) {}
+  showToast(failMsg || '登录态校验失败，请重试');
 }
 
 async function doCookieLogin() {
@@ -845,21 +967,7 @@ async function doCookieLogin() {
     });
     const data = await r.json();
     if (data.code === 200) {
-      closeCookieModal();
-      showToast('Cookie 已保存，验证中...');
-      const infoR = await fetch(`${API}/api/user/info`);
-      const infoData = await infoR.json();
-      if (infoData.code === 200 && infoData.data) {
-        _profileUser = infoData.data;
-        saveCachedUser(_profileUser);
-        _autoLoginPending = false;
-        _loadOnlineShelf();
-        renderProfile($('app'));
-        showToast('登录成功 · 云端与本地书架独立存储');
-      } else {
-        showToast('Cookie 无效，请检查是否已登录');
-        await fetch(`${API}/api/user/cookie`, { method: 'DELETE' });
-      }
+      await _afterLoginSuccess('Cookie 已保存并登录', 'Cookie 无效，请检查是否已登录');
     } else {
       showToast('保存失败');
     }
