@@ -34,6 +34,10 @@ RUN sed -i "s|deb.debian.org|mirrors.aliyun.com|g" /etc/apt/sources.list.d/debia
     libxslt1.1 \
     && rm -rf /var/lib/apt/lists/*
 
+# 真实版本号由构建参数注入（compose 传 APP_VERSION，取自 git describe）
+ARG VERSION=0.0.0-dev
+ENV APP_VERSION=${VERSION}
+
 # Create non-root user for security
 RUN groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid appuser --shell /bin/bash --create-home appuser

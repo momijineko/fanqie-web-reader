@@ -194,6 +194,8 @@ jobs:
             docker system prune -f 2>/dev/null || true
             
             echo "Building web reader..."
+            export APP_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0-dev")
+            echo "APP_VERSION=$APP_VERSION"
             docker compose build --no-cache fanqie-web-reader
             docker compose up -d
             

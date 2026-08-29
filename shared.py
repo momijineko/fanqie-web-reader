@@ -26,17 +26,21 @@ _version_cache: str | None = None
 
 
 def resolve_version() -> str:
-    """启动后首次调用时通过 git describe 计算版本号并缓存，避免每次请求都 fork 子进程。"""
+    """版本号解析：优先 APP_VERSION 环境变量（Docker 构建时注入 git describe 结果），
+    其次本地 git describe，兜底 0.0.0-dev。进程内缓存避免每次请求 fork 子进程。"""
     global _version_cache
     if _version_cache is None:
-        try:
-            import subprocess
-            _version_cache = subprocess.check_output(
-                ["git", "describe", "--tags", "--abbrev=0"],
-                stderr=subprocess.DEVNULL, timeout=3,
-            ).decode().strip()
-        except Exception:
-            _version_cache = "0.0.0-dev"
+        version = os.environ.get("APP_VERSION", "").strip()
+        if not version:
+            try:
+                import subprocess
+                version = subprocess.check_output(
+                    ["git", "describe", "--tags", "--abbrev=0"],
+                    stderr=subprocess.DEVNULL, timeout=3,
+                ).decode().strip()
+            except Exception:
+                version = ""
+        _version_cache = version or "0.0.0-dev"
     return _version_cache
 
 
