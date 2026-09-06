@@ -98,7 +98,7 @@ function renderScrollReader(app, bid, idx) {
       <button class="btn-accent" ${nextIdx>=0?`onclick="navigate('reader?book_id=${bid}&chapter_idx=${nextIdx}')"`:'disabled'}>下一章 <i data-lucide="chevron-right" width="16" height="16"></i></button>
     </div>
   </div>
-  <div class="reader-bottom-sheet auto-hide" id="readerToolbar">
+  <div class="reader-bottom-sheet auto-hide hidden-toolbar" id="readerToolbar">
     <div class="sheet-handle"></div>
     <div class="reader-settings">
       <div class="settings-row">
@@ -203,23 +203,25 @@ function setupScrollAutoNext(bid, idx) {
   autoNextObserver.observe(sentinel);
 }
 
+// 底栏仅在下滑阅读时自动收起；不再随上滑自动弹出（弹出只由 Aa 按钮触发），
+// 避免鼠标滚轮/上滑时整块设置面板反复遮挡正文
+let scrollToolbarOnScroll = null;
 function setupScrollToolbarAutoHide() {
+  if (scrollToolbarOnScroll) window.removeEventListener('scroll', scrollToolbarOnScroll);
   scrollState.lastScrollY = window.scrollY;
   scrollState.ticking = false;
-  window.addEventListener('scroll', function() {
+  scrollToolbarOnScroll = function() {
     if (scrollState.ticking) return;
     scrollState.ticking = true;
     requestAnimationFrame(() => {
       const curY = window.scrollY;
       const tb = $('readerToolbar');
-      if (tb) {
-        if (curY > scrollState.lastScrollY + 10) tb.classList.add('hidden-toolbar');
-        else if (curY < scrollState.lastScrollY - 10) tb.classList.remove('hidden-toolbar');
-      }
+      if (tb && curY > scrollState.lastScrollY + 10) tb.classList.add('hidden-toolbar');
       scrollState.lastScrollY = curY;
       scrollState.ticking = false;
     });
-  });
+  };
+  window.addEventListener('scroll', scrollToolbarOnScroll);
 }
 
 function setupScrollSwipe(bid, idx, total) {
@@ -906,7 +908,12 @@ window.addEventListener('read-mode-change', () => {
   const q = {};
   const qs = hash.split('?')[1];
   if (qs) new URLSearchParams(qs).forEach((v,k) => q[k] = v);
-  if (q.book_id) renderReader($('app'), q.book_id, parseInt(q.chapter_idx||'0'));
+  if (q.book_id) {
+    // 模式切换不触发 hashchange，不会经过 router()，需在此同步 body 滚动锁，
+    // 否则从翻页模式切到上下滚动后 overflow 残留 'hidden'，页面完全无法滚动
+    document.body.style.overflow = getReadMode() === 'page' ? 'hidden' : '';
+    renderReader($('app'), q.book_id, parseInt(q.chapter_idx||'0'));
+  }
 });
 window.addEventListener('reader-settings-change', () => {
   if (getReadMode() === 'scroll') return;

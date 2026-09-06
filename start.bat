@@ -145,7 +145,10 @@ certutil -hashfile "%JAR%" SHA256 | find /i "%UNIDBG_SHA256%" >nul || (
 )
 
 echo [start] Launching unidbg in a new window, health check up to 3 min ...
-start "fqnovel-unidbg" /min cmd /k %JAVA_CMD% -Dfile.encoding=UTF-8 -jar "%JAR%"
+rem Must pass --server.port explicitly: the SERVER_PORT env var (for the Python web
+rem service) would otherwise be picked up by Spring Boot relaxed binding and make
+rem unidbg steal port 8080, colliding with the web server.
+start "fqnovel-unidbg" /min cmd /k %JAVA_CMD% -Dfile.encoding=UTF-8 -jar "%JAR%" --server.port=%UNIDBG_PORT%
 
 set /a TRIES=0
 :wait_unidbg

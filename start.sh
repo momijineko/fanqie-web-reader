@@ -155,7 +155,10 @@ if [ "$have_unidbg" = "1" ]; then
     [ "$calc" = "$UNIDBG_SHA256" ] || fail "jar 校验不符：$calc"
 
     say "后台启动 unidbg（日志 unidbg/unidbg.log，健康检查最长等 3 分钟）..."
-    "$JAVA_CMD" -Dfile.encoding=UTF-8 -jar "$JAR" > unidbg/unidbg.log 2>&1 &
+    # Must pass --server.port explicitly: the SERVER_PORT env var (for the Python web
+    # service) would otherwise be picked up by Spring Boot relaxed binding and make
+    # unidbg steal port 8080, colliding with the web server.
+    "$JAVA_CMD" -Dfile.encoding=UTF-8 -jar "$JAR" --server.port=${UNIDBG_PORT} > unidbg/unidbg.log 2>&1 &
     UNIDBG_PID=$!
 
     ok=0
