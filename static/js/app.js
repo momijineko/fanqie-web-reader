@@ -275,6 +275,20 @@ function changeLineHeightTo(lh) {
   readerSettingsChanged();
 }
 
+// ---- Shelf sort ----
+function getShelfSort() { return localStorage.getItem('shelfSort') || 'recent'; }
+function setShelfSort(sort) { localStorage.setItem('shelfSort', sort); }
+
+// ---- Debug log ----
+function getDebugLog() { return localStorage.getItem('debugLog') === 'on'; }
+function setDebugLog(on) { localStorage.setItem('debugLog', on ? 'on' : 'off'); }
+function toggleDebugLog() {
+  const on = !getDebugLog();
+  setDebugLog(on);
+  renderProfile($('app'));
+  if (on) console.log('[调试日志] 已开启');
+}
+
 // ---- Read mode ----
 const READ_MODES = [
   { id: 'page', label: '左右平移' },

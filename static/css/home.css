@@ -48,20 +48,20 @@
 .shelf-tabs { display: flex; gap: 6px; margin-bottom: var(--sp-4); }
 .shelf-tab { padding: 6px 16px; border-radius: var(--radius-pill); font-size: var(--fs-sm); font-weight: 500; color: var(--text-secondary); background: var(--badge-bg); cursor: pointer; transition: all var(--dur-fast); }
 .shelf-tab.active { background: var(--accent); color: #fff; }
-.shelf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-3); align-items: start; }
+.shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); grid-row-gap: 20px; grid-column-gap: 60px; align-items: start; }
 .shelf-grid-item { text-align: center; cursor: pointer; position: relative; min-width: 0; transition: opacity 0.2s ease, transform 0.2s ease; }
 .shelf-grid-item.filter-hidden { opacity: 0.15; transform: scale(0.92); pointer-events: none; }
-.shelf-grid-item .cover-wrap { width: 100%; aspect-ratio: 3/4; border-radius: var(--radius); overflow: hidden; background: var(--badge-bg); box-shadow: var(--shadow); transition: transform var(--dur-fast), box-shadow var(--dur); position: relative; }
+.shelf-grid-item .cover-wrap { width: 120px; max-width: 100%; aspect-ratio: 3/4; margin: 0 auto; border-radius: 4px; overflow: hidden; background: var(--badge-bg); box-shadow: var(--shadow); transition: transform var(--dur-fast), box-shadow var(--dur); position: relative; }
 .shelf-grid-item .cover-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.shelf-grid-item .cover-badge { position: absolute; top: 0; left: 0; font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: var(--radius) 0 6px 0; z-index: 1; white-space: nowrap; }
+.shelf-grid-item .cover-badge { position: absolute; top: 6px; right: 6px; left: auto; font-size: 10px; line-height: 14px; font-weight: 500; padding: 0 4px; border-radius: 2px; z-index: 1; white-space: nowrap; }
 .cover-badge.ongoing { background: rgba(232,114,42,0.9); color: #fff; }
 .cover-badge.finished { background: rgba(39,174,96,0.9); color: #fff; }
 .cover-badge.updated { background: rgba(52,152,219,0.9); color: #fff; }
 .cover-badge.stopped { background: rgba(149,165,166,0.9); color: #fff; }
 .cover-badge.readall { background: rgba(142,68,173,0.9); color: #fff; }
 .shelf-grid-item:active .cover-wrap { transform: scale(0.96); box-shadow: var(--shadow-md); }
-.shelf-grid-item .name { font-size: var(--fs-sm); margin-top: var(--sp-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
-.shelf-grid-item .progress-text { font-size: var(--fs-xs); color: var(--accent); margin-top: var(--sp-1); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 14px; }
+.shelf-grid-item .name { font-size: 14px; line-height: 20px; margin-top: 8px; padding: 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.shelf-grid-item .progress-text { font-size: 12px; line-height: 17px; color: var(--text-muted); margin-top: 2px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 17px; }
 .shelf-grid-item .del-btn { position: absolute; top: -6px; right: -6px; width: 24px; height: 24px; background: rgba(0,0,0,0.65); color: #fff; border-radius: 50%; font-size: 11px; display: flex; align-items: center; justify-content: center; border: 2px solid var(--card-bg); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); transition: transform var(--dur-fast), opacity var(--dur-fast); opacity: 0; pointer-events: none; }
 .shelf-grid-item .del-btn:active { transform: scale(0.88); }
 .shelf-grid-item.show-delete .del-btn { opacity: 1; pointer-events: auto; }

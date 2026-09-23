@@ -256,7 +256,7 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 
 /* 11. Shelf Grid */
 .skel-shelf { margin-top: 20px; }
-.skel-shelf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px 0; }
+.skel-shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 10px; padding: 12px 0; }
 .skel-shelf-item { display: flex; flex-direction: column; gap: 8px; }
 .skel-shelf-cover { aspect-ratio: 3/4; width: 100%; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 .skel-shelf-name { width: auto; flex: 1; height: 12px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }

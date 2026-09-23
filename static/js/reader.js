@@ -216,12 +216,12 @@ function setupScrollToolbarAutoHide() {
     requestAnimationFrame(() => {
       const curY = window.scrollY;
       const tb = $('readerToolbar');
-      if (tb && curY > scrollState.lastScrollY + 10) tb.classList.add('hidden-toolbar');
+      if (tb && curY > scrollState.lastScrollY + 5) tb.classList.add('hidden-toolbar');
       scrollState.lastScrollY = curY;
       scrollState.ticking = false;
     });
   };
-  window.addEventListener('scroll', scrollToolbarOnScroll);
+  window.addEventListener('scroll', scrollToolbarOnScroll, { passive: true });
 }
 
 function setupScrollSwipe(bid, idx, total) {

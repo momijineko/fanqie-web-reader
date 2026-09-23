@@ -96,7 +96,9 @@ function renderShelf(app, filter) {
   const data = loadData();
   const rh = data.readingHistory;
 
+  const sort = getShelfSort();
   let html = `<div class="home-section view">`;
+  html += `<div class="shelf-tabs"><button class="shelf-tab${sort==='recent'?' active':''}" onclick="setShelfSortMode('recent')">最近阅读</button><button class="shelf-tab${sort==='added'?' active':''}" onclick="setShelfSortMode('added')">收藏时间</button></div>`;
   if (_profileUser) {
     $('pageTitle').textContent = `我的书架 · ${_onlineShelf.length} 本`;
     html += _renderCloudShelf(rh);
@@ -114,6 +116,8 @@ function renderShelf(app, filter) {
   _setupLongPress(app);
   _applyShelfFilter();
 }
+
+function setShelfSortMode(mode) { setShelfSort(mode); renderShelf($('app')); }
 
 function _applyShelfFilter() {
   const filter = (_shelfFilter || '').toLowerCase();
@@ -374,12 +378,26 @@ function _renderLocalShelf(shelf, rh) {
       ungrouped.push(b);
     }
   }
-  const itemTime = b => b.addedAt || 0;
+  const sortMode = getShelfSort();
+  const itemTime = b => {
+    const addedAt = Number(b.addedAt) || 0;
+    if (sortMode === 'added') return addedAt;
+    const progress = getBookProgress(b.bookId);
+    const progressTime = progress ? Number(progress.updatedAt) || 0 : 0;
+    const historyTime = rh && String(rh.bookId) === String(b.bookId) ? Number(rh.updatedAt) || 0 : 0;
+    return Math.max(progressTime, historyTime, addedAt);
+  };
   const groupMaxTime = g => Math.max(...g.books.map(itemTime));
   const items = [];
   for (const b of ungrouped) items.push({ type: 'book', time: itemTime(b), data: b, isLocal: true });
   for (const [gid, g] of groups) items.push({ type: 'folder', time: groupMaxTime(g), gid, g: { name: g.name, books: g.books }, isLocal: true });
   items.sort((a, b) => b.time - a.time);
+  if (getDebugLog()) {
+    for (const item of items) if (item.type === 'book') {
+      const b = item.data;
+      console.log('[书架调试]', b.name||b.bookId, '| 阅读时间:', new Date(item.time).toLocaleString(), '| 添加时间:', new Date(b.addedAt||0).toLocaleString());
+    }
+  }
 
   let html = '<div class="shelf-grid">';
   for (const item of items) {
@@ -459,12 +477,19 @@ function _renderCloudShelf(rh) {
     if (!groups.has(gid)) groups.set(gid, { name: gname, books: [] });
     groups.get(gid).books.push(b);
   }
-  const itemTime = b => Math.max(b.LastReadTime || 0, b.LastUpdateTime || 0);
+  const sortMode = getShelfSort();
+  const itemTime = b => sortMode === 'added' ? (b.AddTime || 0) : (b.LastReadTime || b.AddTime || 0);
   const groupMaxTime = g => Math.max(...g.books.map(itemTime));
   const items = [];
   for (const b of ungrouped) items.push({ type: 'book', time: itemTime(b), data: b });
   for (const [gid, g] of groups) items.push({ type: 'folder', time: groupMaxTime(g), gid, g });
   items.sort((a, b) => b.time - a.time);
+  if (getDebugLog()) {
+    for (const item of items) if (item.type === 'book') {
+      const b = item.data;
+      console.log('[书架调试]', b.Name||b.BookID, '| 阅读时间:', new Date(item.time*1000).toLocaleString(), '| 添加时间:', new Date((b.AddTime||0)*1000).toLocaleString());
+    }
+  }
   html += '<div class="shelf-grid">';
   for (const item of items) {
     if (item.type === 'book') {
@@ -649,6 +674,14 @@ function _settingsHtml() {
         <span class="profile-stat-value">${cacheSize}</span>
         <i data-lucide="chevron-right" width="16" height="16" class="profile-arrow"></i>
       </div>
+      <div class="profile-setting-item" onclick="toggleDebugLog()">
+        <i data-lucide="terminal" width="18" height="18"></i>
+        <span>调试日志</span>
+        <label class="toggle-switch" onclick="event.stopPropagation()">
+          <input type="checkbox" ${getDebugLog()?'checked':''} onchange="toggleDebugLog()">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     </div>
   </div>`;
 }
@@ -670,7 +703,7 @@ function _aboutHtml() {
 
 function clearAllCache() {
   if (!confirm('确认清除数据缓存？本地书架、阅读进度等将被清除，但主题、字体等设置会保留。')) return;
-  const keep = ['readerTheme', 'readerLightTheme', 'readerFont', 'fontSize', 'lineHeight', 'readMode'];
+  const keep = ['readerTheme', 'readerLightTheme', 'readerFont', 'fontSize', 'lineHeight', 'readMode', 'shelfSort', 'debugLog'];
   const saved = {};
   for (const k of keep) { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; }
   localStorage.clear();
