@@ -56,6 +56,6 @@ jobs:
 
             EXPECTED_SHA="$EXPECTED_SHA" "$HOME/bin/native-deploy.sh"
 
-            systemctl --user --no-pager is-active fanqie-fqapi.service fanqie-web.service
+            # native-deploy.sh already requires fqapi /readyz + both units active
             free -h
             echo "Deployment completed successfully!"

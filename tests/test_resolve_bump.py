@@ -21,6 +21,7 @@ def test_skip_release_label():
 
 def test_breaking_commit():
     assert bump_from_commits(["feat!: drop unidbg"]) == "major"
+    assert bump_from_commits(["feat(api)!: drop unidbg"]) == "major"
     assert bump_from_commits(["feat: x\n\nBREAKING CHANGE: api gone"]) == "major"
 
 

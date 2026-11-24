@@ -38,10 +38,13 @@ LABEL_MINOR = {"bump:minor", "version:minor", "feature", "enhancement"}
 LABEL_PATCH = {"bump:patch", "version:patch", "bug", "fix"}
 LABEL_NONE = {"bump:none", "version:skip", "skip-release"}
 
+# Conventional Commits: type(optional-scope)optional-!: …
+# Matches both feat!: and feat(api)!: (bang after scope per the spec).
 COMMIT_TYPE_RE = re.compile(
     r"^(?P<type>feat|fix|perf|refactor|docs|chore|test|ci|build|style|revert)"
+    r"(?:\([^)]*\))?"
     r"(?P<breaking>!)?"
-    r"(?:\([^)]*\))?\s*:\s*",
+    r"\s*:\s*",
     re.IGNORECASE,
 )
 BREAKING_FOOTER_RE = re.compile(r"^BREAKING CHANGE:", re.MULTILINE | re.IGNORECASE)

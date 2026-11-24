@@ -24,10 +24,13 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Checkout
+      - name: Checkout merge commit on main
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          # Tag the real merge result on main — NOT refs/pull/*/merge
+          # (squash/rebase SHAs differ from the synthetic merge ref).
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
 
       - name: Setup Python
         uses: actions/setup-python@v7
@@ -131,12 +134,15 @@ jobs:
           TAG: ${{ steps.bump.outputs.tag }}
           BUMP: ${{ steps.bump.outputs.bump }}
           PR: ${{ github.event.pull_request.number }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           set -euo pipefail
           TITLE=$(cat /tmp/release-meta/title.txt)
+          test -n "$MERGE_SHA"
+          test "$(git rev-parse HEAD)" = "$MERGE_SHA"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$TAG" -m "release $TAG ($BUMP)
+          git tag -a "$TAG" "$MERGE_SHA" -m "release $TAG ($BUMP)
 
           PR #$PR: $TITLE
           "
@@ -147,6 +153,7 @@ jobs:
           {
             echo "## Release"
             echo ""
+            echo "- merge_sha: \`${{ github.event.pull_request.merge_commit_sha }}\`"
             echo "- current: \`${{ steps.bump.outputs.current }}\`"
             echo "- bump: \`${{ steps.bump.outputs.bump }}\`"
             echo "- tag: \`${{ steps.bump.outputs.tag || '(none)' }}\`"

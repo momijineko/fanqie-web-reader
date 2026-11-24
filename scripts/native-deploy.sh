@@ -142,18 +142,32 @@ systemctl --user daemon-reload
 systemctl --user restart fanqie-fqapi.service || true
 systemctl --user restart fanqie-web.service
 
+FQAPI_READY=0
 for i in $(seq 1 40); do
   if curl -fsS --noproxy '*' --connect-timeout 3 http://127.0.0.1:18921/readyz >/dev/null 2>&1; then
     echo "fqapi READY"
+    FQAPI_READY=1
     break
   fi
   sleep 3
 done
+if [ "$FQAPI_READY" != "1" ]; then
+  echo "fqapi never became ready (unit=$(systemctl --user is-active fanqie-fqapi.service))"
+  exit 1
+fi
+
 WEB_CODE=$(curl -s --noproxy '*' -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8199/api/health || echo 000)
 echo "Web reader HTTP $WEB_CODE"
 if [ "$WEB_CODE" != "200" ]; then
   echo "health check failed (fqapi=$(systemctl --user is-active fanqie-fqapi.service) web=$(systemctl --user is-active fanqie-web.service))"
   exit 1
 fi
-systemctl --user --no-pager is-active fanqie-fqapi.service fanqie-web.service
+
+FQAPI_STATE=$(systemctl --user is-active fanqie-fqapi.service || true)
+WEB_STATE=$(systemctl --user is-active fanqie-web.service || true)
+echo "fqapi=$FQAPI_STATE web=$WEB_STATE"
+if [ "$FQAPI_STATE" != "active" ] || [ "$WEB_STATE" != "active" ]; then
+  echo "REFUSING success: both fanqie-fqapi and fanqie-web must be active"
+  exit 1
+fi
 echo "Deployment completed successfully!"
