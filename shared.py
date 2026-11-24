@@ -131,7 +131,7 @@ def _fqapi_safe_url(path: str) -> httpx.URL | None:
     return url
 
 
-async def fqapi_get(path: str, params: dict | None = None) -> dict | None:
+async def fqapi_get(path: str, params: dict | None = None, timeout: float = 20.0) -> dict | None:
     """请求 fqapi-core；成功（HTTP 200 且业务 code 为 0/缺省）时返回完整 JSON，否则 None。
 
     注意：fqapi 多数响应是上游原样透传——搜索的 search_tabs 在顶层，详情/正文在 data 下。
@@ -148,7 +148,7 @@ async def fqapi_get(path: str, params: dict | None = None) -> dict | None:
             url,
             params=params,
             headers=_fqapi_headers(),
-            timeout=20.0,
+            timeout=timeout,
         )
         if r.status_code != 200:
             logger.info("fqapi %s HTTP %s", path, r.status_code)

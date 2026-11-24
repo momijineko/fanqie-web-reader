@@ -19,9 +19,12 @@ from shared import (
 )
 
 # 段评列表不含楼中楼正文，需另调 reply/list。限制并发与条数，避免拖慢面板打开。
+# 前端 fetchWithTimeout 默认 15s；楼中楼补全必须远低于该值，超时则退回仅主评。
 _REPLY_ENRICH_MAX_COMMENTS = 8
 _REPLY_ENRICH_PER_COMMENT = 5
 _REPLY_ENRICH_CONCURRENCY = 4
+_REPLY_ENRICH_BUDGET_S = 4.0
+_REPLY_FETCH_TIMEOUT_S = 3.5
 
 router = APIRouter()
 
@@ -276,7 +279,11 @@ async def paragraph_comments(body: ParaCommentsPayload):
 
 
 async def _enrich_comments_with_replies(comments: list, book_id: str, chapter_id: str) -> None:
-    """Fill reply_list for comments that only expose reply_count."""
+    """Fill reply_list for comments that only expose reply_count.
+
+    Best-effort: never let reply lookups delay past ``_REPLY_ENRICH_BUDGET_S``.
+    Parent comments must still return if enrichment times out.
+    """
     if not book_id or not chapter_id:
         return
     targets = []
@@ -312,7 +319,16 @@ async def _enrich_comments_with_replies(comments: list, book_id: str, chapter_id
             if replies:
                 c["reply_list"] = replies
 
-    await asyncio.gather(*[_one(c) for c in targets], return_exceptions=True)
+    try:
+        await asyncio.wait_for(
+            asyncio.gather(*[_one(c) for c in targets], return_exceptions=True),
+            timeout=_REPLY_ENRICH_BUDGET_S,
+        )
+    except asyncio.TimeoutError:
+        logger.info(
+            "paragraph reply enrich timed out after %.1fs (returning parent comments)",
+            _REPLY_ENRICH_BUDGET_S,
+        )
 
 
 async def _fetch_comment_replies(
@@ -333,6 +349,7 @@ async def _fetch_comment_replies(
             "group_id": chapter_id,
             "count": count,
         },
+        timeout=_REPLY_FETCH_TIMEOUT_S,
     )
     if raw is not None:
         replies = _normalize_replies(raw)
@@ -349,7 +366,7 @@ async def _fetch_comment_replies(
                     "chapterId": chapter_id,
                     "count": count,
                 },
-                timeout=15.0,
+                timeout=_REPLY_FETCH_TIMEOUT_S,
             )
             return _normalize_replies(r.json())
         except Exception as e:
