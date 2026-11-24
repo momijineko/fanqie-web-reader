@@ -1211,6 +1211,88 @@ function openParaComment(paraIdx) {
   loadParaCommentList(chapterId, paraIdx, currentBookId);
 }
 
+function renderParaReplyItems(replies) {
+  let html = '';
+  for (const rc of (replies || [])) {
+    const rcAvatar = rc.avatar_url || '';
+    const rcUser = rc.user_name || rc.nick_name || '匿名';
+    const rcTo = rc.reply_to_user_name || '';
+    const rcText = rc.content || rc.text || '';
+    const rcUserLine = rcTo
+      ? `${escapeHtml(rcUser)} <span class="comment-reply-to">回复</span> ${escapeHtml(rcTo)}`
+      : escapeHtml(rcUser);
+    const rcAvatarHtml = rcAvatar
+      ? `<img class="comment-avatar comment-avatar-sm" src="${safeImgUrl(rcAvatar)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'comment-avatar comment-avatar-sm comment-avatar-placeholder\\'>${escapeHtml(rcUser.charAt(0))}</div>'">`
+      : `<div class="comment-avatar comment-avatar-sm comment-avatar-placeholder">${escapeHtml(rcUser.charAt(0))}</div>`;
+    html += `<div class="comment-item">${rcAvatarHtml}<div class="comment-body"><div class="comment-user">${rcUserLine}</div><div class="comment-text">${escapeHtml(rcText)}</div></div></div>`;
+  }
+  return html;
+}
+
+async function toggleParaCommentReplies(btn) {
+  if (!btn) return;
+  const wrap = btn.closest('.comment-reply-wrap');
+  if (!wrap) return;
+  const list = wrap.querySelector('.comment-reply');
+  const commentId = wrap.dataset.commentId || '';
+  const replyCount = parseInt(wrap.dataset.replyCount || '0', 10) || 0;
+  const expanded = wrap.dataset.expanded === '1';
+
+  if (expanded) {
+    wrap.dataset.expanded = '0';
+    if (list) list.hidden = true;
+    btn.textContent = replyCount > 0 ? `展开 ${replyCount} 条回复` : '展开回复';
+    return;
+  }
+
+  // Already loaded once — just re-show.
+  if (wrap.dataset.loaded === '1' && list) {
+    wrap.dataset.expanded = '1';
+    list.hidden = false;
+    btn.textContent = '收起回复';
+    return;
+  }
+
+  const panel = $('paraCommentPanel');
+  const chapterId = panel ? panel.dataset.chapterId : '';
+  const bookId = currentBookId || '';
+  if (!commentId || !chapterId) {
+    showToast('无法加载回复');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '加载中…';
+  try {
+    const replies = await fetchParagraphCommentReplies(commentId, chapterId, bookId);
+    if (!list) return;
+    // reply_count>0 却空列表：多半是风控/超时，不当成「已加载」以免再也拉不到。
+    if (!replies.length && replyCount > 0) {
+      throw new Error('empty replies while reply_count>0');
+    }
+    if (!replies.length) {
+      list.innerHTML = '<div class="comment-reply-empty">暂无回复</div>';
+    } else {
+      list.innerHTML = renderParaReplyItems(replies);
+    }
+    list.hidden = false;
+    wrap.dataset.loaded = '1';
+    wrap.dataset.expanded = '1';
+    if (replies.length && replyCount !== replies.length) {
+      wrap.dataset.replyCount = String(replies.length);
+    }
+    btn.textContent = '收起回复';
+  } catch (e) {
+    wrap.dataset.loaded = '0';
+    wrap.dataset.expanded = '0';
+    if (list) list.hidden = true;
+    btn.textContent = replyCount > 0 ? `展开 ${replyCount} 条回复` : '展开回复';
+    showToast('回复加载失败');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function loadParaCommentList(chapterId, paraIdx, bookId) {
   const container = $('paraPanelComments');
   if (!container) return;
@@ -1229,7 +1311,8 @@ async function loadParaCommentList(chapterId, paraIdx, bookId) {
       const time = c.create_time || c.create_timestamp || 0;
       const digg = c.digg_count || 0;
       const imgs = c.images || [];
-      const reply = c.reply_list || c.reply_comment || c.child_comments || null;
+      const replyCount = parseInt(c.reply_count || 0, 10) || 0;
+      const commentId = c.comment_id || '';
       const avatarHtml = avatar ? `<img class="comment-avatar" src="${safeImgUrl(avatar)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'comment-avatar comment-avatar-placeholder\\'>${escapeHtml(user.charAt(0))}</div>'">` : `<div class="comment-avatar comment-avatar-placeholder">${escapeHtml(user.charAt(0))}</div>`;
       html += `<div class="comment-item">${avatarHtml}<div class="comment-body"><div class="comment-user">${escapeHtml(user)}</div><div class="comment-text">${escapeHtml(text)}</div>`;
       if (imgs.length > 0) {
@@ -1243,14 +1326,10 @@ async function loadParaCommentList(chapterId, paraIdx, bookId) {
       if (timeStr || diggStr) {
         html += `<div class="comment-meta">${timeStr ? `<span>${timeStr}</span>` : ''}${diggStr}</div>`;
       }
-      if (reply && Array.isArray(reply) && reply.length > 0) {
-        html += '<div class="comment-reply">';
-        for (const rc of reply.slice(0,3)) {
-          const rcAvatar = rc.avatar_url || '';
-          const rcUser = rc.user_name || rc.nick_name || '匿名';
-          const rcAvatarHtml = rcAvatar ? `<img class="comment-avatar comment-avatar-sm" src="${safeImgUrl(rcAvatar)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'comment-avatar comment-avatar-sm comment-avatar-placeholder\\'>${escapeHtml(rcUser.charAt(0))}</div>'">` : `<div class="comment-avatar comment-avatar-sm comment-avatar-placeholder">${escapeHtml(rcUser.charAt(0))}</div>`;
-          html += `<div class="comment-item">${rcAvatarHtml}<div class="comment-body"><div class="comment-user">${escapeHtml(rcUser)}</div><div class="comment-text">${escapeHtml(rc.content||rc.text||'')}</div></div></div>`;
-        }
+      if (replyCount > 0 && commentId) {
+        html += `<div class="comment-reply-wrap" data-comment-id="${escapeAttr(String(commentId))}" data-reply-count="${replyCount}" data-expanded="0">`;
+        html += `<button type="button" class="comment-reply-toggle" onclick="toggleParaCommentReplies(this)">展开 ${replyCount} 条回复</button>`;
+        html += `<div class="comment-reply" hidden></div>`;
         html += '</div>';
       }
       html += '</div></div>';

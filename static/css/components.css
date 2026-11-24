@@ -35,14 +35,25 @@
 .comment-digg { display: inline-flex; align-items: center; gap: 3px; color: var(--text-muted); font-weight: 500; }
 .comment-digg::before { content: ''; display: inline-block; width: 12px; height: 12px; background-color: currentColor; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3'/%3E%3C/svg%3E") center/contain no-repeat; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3'/%3E%3C/svg%3E") center/contain no-repeat; opacity: 0.65; }
 
-/* Reply section */
+/* Reply section (expand on demand) */
+.comment-reply-wrap { margin-top: var(--sp-2); }
+.comment-reply-toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0; border: none; background: transparent;
+  color: var(--accent); font-size: var(--fs-xs); font-weight: 600;
+  cursor: pointer; line-height: 1.4; -webkit-tap-highlight-color: transparent;
+}
+.comment-reply-toggle:disabled { opacity: 0.55; cursor: default; }
+.comment-reply-toggle:hover:not(:disabled), .comment-reply-toggle:active:not(:disabled) { opacity: 0.85; }
 .comment-reply { margin-left: 0; margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: color-mix(in srgb, var(--badge-bg) 70%, transparent); border-radius: var(--radius-sm); border-left: none; }
 .comment-reply .comment-item { border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent); padding: var(--sp-2) 0; gap: 8px; animation: none; }
 .comment-reply .comment-item:last-child { border-bottom: none; padding-bottom: 0; }
 .comment-reply .comment-item:first-child { padding-top: 0; }
 .comment-reply .comment-user { font-size: var(--fs-xs); color: var(--text-secondary); font-weight: 600; }
+.comment-reply .comment-reply-to { font-weight: 400; color: var(--text-muted); margin: 0 2px; }
 .comment-reply .comment-text { font-size: var(--fs-sm); margin-top: 1px; color: var(--text); line-height: var(--lh-normal); }
 .comment-reply .comment-avatar { width: 24px; height: 24px; }
+.comment-reply-empty { font-size: var(--fs-xs); color: var(--text-muted); padding: var(--sp-1) 0; }
 
 @keyframes commentItemFadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
