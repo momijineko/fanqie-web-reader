@@ -9,41 +9,36 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Deploy to VPS via SSH
       uses: appleboy/ssh-action@v1.0.3
       env:
-        REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-        UNIDBG_ADMIN_PASSWORD: ${{ secrets.UNIDBG_ADMIN_PASSWORD }}
+        FQAPI_TOKEN: ${{ secrets.FQAPI_TOKEN }}
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USERNAME }}
         key: ${{ secrets.VPS_SSH_KEY }}
         port: ${{ secrets.VPS_PORT || 22 }}
         command_timeout: 30m
-        envs: REDIS_PASSWORD,UNIDBG_ADMIN_PASSWORD
+        envs: FQAPI_TOKEN
         script: |
-            # ===== STEP 0: Free disk/memory FIRST, before anything else =====
             echo "=== Initial disk ==="
             df -h /
             echo "=== Initial memory ==="
             free -h
-            
-            # Stop everything that might be using memory/disk
+
             docker compose -f /projects/fanqie-web-reader/docker-compose.yml down --remove-orphans 2>/dev/null || true
-            docker system prune -af --volumes 2>/dev/null || true
-            # Kill old unidbg if running
+            # Stop legacy unidbg if still running from older deploys
             if [ -f /opt/unidbg/unidbg.pid ]; then
               OLD_PID=$(cat /opt/unidbg/unidbg.pid)
               kill "$OLD_PID" 2>/dev/null || true
               rm -f /opt/unidbg/unidbg.pid
             fi
-            # Clean temp files
             rm -rf /tmp/unidbg_* /tmp/hsperfdata_* 2>/dev/null || true
+            docker system prune -af 2>/dev/null || true
             apt-get clean 2>/dev/null || true
-            
-            # Ensure swap
+
             if ! swapon --show | grep -q /swapfile; then
               if [ ! -f /swapfile ]; then
                 echo "Creating 1GB swap..."
@@ -53,160 +48,78 @@ jobs:
               fi
               swapon /swapfile
             fi
-            
+
             echo "=== After cleanup ==="
             df -h /
             free -h
-            
-            # ===== STEP 1: Pull code (now there's space) =====
+
             cd /projects/fanqie-web-reader
             git fetch origin main
             git reset --hard origin/main
             echo "Current commit: $(git rev-parse --short HEAD)"
-            
-            # ===== STEP 2: Install JRE =====
-            export DEBIAN_FRONTEND=noninteractive
-            if ! command -v java &>/dev/null; then
-              echo "Installing JRE..."
-              apt-get update -qq
-              apt-get install -y -qq --no-install-recommends default-jre-headless curl libstdc++6
-            fi
-            JAVA_BIN=$(which java)
-            echo "Java: $($JAVA_BIN -version 2>&1 | head -1)"
-            
-            # ===== STEP 3: Prepare unidbg =====
-            UNIDBG_DIR=/opt/unidbg
-            UNIDBG_JAR="$UNIDBG_DIR/unidbg-boot-server.jar"
-            PID_FILE="$UNIDBG_DIR/unidbg.pid"
-            UNIDBG_VERSION="0.0.6"
-            UNIDBG_SHA256="505fa249c37365cde4bcaafcd433cc6e8af83fdfb1948a5b145ddc5a45293cfb"
-            JAR_URL="https://github.com/mtongle/fqnovel-unidbg/releases/download/v${UNIDBG_VERSION}/unidbg-boot-server-${UNIDBG_VERSION}.jar"
-            mkdir -p "$UNIDBG_DIR"
 
-            ADMIN_PASSWORD_FILE="$UNIDBG_DIR/admin-password"
-            if [ -n "${UNIDBG_ADMIN_PASSWORD:-}" ]; then
+            # Persist / inject FQAPI_TOKEN into .env (required by compose)
+            TOKEN_FILE=/opt/fqapi/token
+            mkdir -p /opt/fqapi
+            if [ -n "${FQAPI_TOKEN:-}" ]; then
               umask 077
-              printf '%s' "$UNIDBG_ADMIN_PASSWORD" > "$ADMIN_PASSWORD_FILE"
-            elif [ -s "$ADMIN_PASSWORD_FILE" ]; then
-              UNIDBG_ADMIN_PASSWORD=$(cat "$ADMIN_PASSWORD_FILE")
+              printf '%s' "$FQAPI_TOKEN" > "$TOKEN_FILE"
+            elif [ -s "$TOKEN_FILE" ]; then
+              FQAPI_TOKEN=$(cat "$TOKEN_FILE")
             else
               umask 077
-              UNIDBG_ADMIN_PASSWORD=$(head -c 48 /dev/urandom | base64 | tr -d '\n')
-              printf '%s' "$UNIDBG_ADMIN_PASSWORD" > "$ADMIN_PASSWORD_FILE"
+              FQAPI_TOKEN=$(openssl rand -hex 32)
+              printf '%s' "$FQAPI_TOKEN" > "$TOKEN_FILE"
             fi
-            if [ "${#UNIDBG_ADMIN_PASSWORD}" -lt 16 ] || [ "$UNIDBG_ADMIN_PASSWORD" = "admin123" ]; then
-              echo "UNIDBG_ADMIN_PASSWORD must be at least 16 characters and must not use the upstream default"
-              exit 1
+            chmod 600 "$TOKEN_FILE"
+            export FQAPI_TOKEN
+            if [ -f .env ]; then
+              if grep -q '^FQAPI_TOKEN=' .env; then
+                sed -i "s|^FQAPI_TOKEN=.*|FQAPI_TOKEN=${FQAPI_TOKEN}|" .env
+              else
+                printf '\nFQAPI_TOKEN=%s\n' "$FQAPI_TOKEN" >> .env
+              fi
+            else
+              cp .env.example .env
+              sed -i "s|^FQAPI_TOKEN=.*|FQAPI_TOKEN=${FQAPI_TOKEN}|" .env
             fi
-            chmod 600 "$ADMIN_PASSWORD_FILE"
-            export APPLICATION_ADMIN_PASSWORD="$UNIDBG_ADMIN_PASSWORD"
 
-            INSTALLED_SHA256=""
-            if [ -f "$UNIDBG_JAR" ]; then
-              INSTALLED_SHA256=$(sha256sum "$UNIDBG_JAR" | awk '{print $1}')
-            fi
-            if [ "$INSTALLED_SHA256" != "$UNIDBG_SHA256" ]; then
-              echo "Downloading fqnovel-unidbg v${UNIDBG_VERSION}..."
-              UNIDBG_JAR_TMP="${UNIDBG_JAR}.download"
-              rm -f "$UNIDBG_JAR_TMP"
-              curl -fL --retry 3 -o "$UNIDBG_JAR_TMP" "$JAR_URL"
-              echo "${UNIDBG_SHA256}  ${UNIDBG_JAR_TMP}" | sha256sum -c -
-              mv -f "$UNIDBG_JAR_TMP" "$UNIDBG_JAR"
-              echo "Installed fqnovel-unidbg v${UNIDBG_VERSION} ($(ls -lh "$UNIDBG_JAR" | awk '{print $5}'))"
-            else
-              echo "fqnovel-unidbg v${UNIDBG_VERSION} already installed and verified"
-            fi
-            
-            # Write unidbg config (connects to redis container on host network)
-            printf 'server:\n  port: 8099\nspring:\n  redis:\n    host: 127.0.0.1\n    port: 6379\n    password: %s\n    timeout: 2000\n    lettuce:\n      pool:\n        max-active: 4\n        max-idle: 2\n        min-idle: 0\napplication:\n  unidbg:\n    dynarmic: false\n    verbose: false\n    async: false\nfq:\n  api:\n    base-url: https://api5-normal-sinfonlineb.fqnovel.com\n    device-pool:\n      enabled: true\n      size: 1\nlogging:\n  level:\n    com.anjia.unidbgserver: INFO\n' "${REDIS_PASSWORD:-fanqie_unidbg_2026}" > "$UNIDBG_DIR/application.yml"
-            
-            # Clean up temp unidbg files from previous runs
-            rm -rf /tmp/unidbg_* /tmp/jna*.tmp 2>/dev/null || true
-            mkdir -p /opt/unidbg/tmp
-            
-            echo "=== Disk before unidbg start ==="
-            df -h /
-            echo "=== Memory before unidbg start ==="
-            free -h
-            
-            # ===== STEP 3.5: Start Redis (for unidbg caching) =====
-            cd /projects/fanqie-web-reader
-            echo "Pulling Redis image..."
-            docker compose pull redis
-            echo "Starting Redis..."
-            docker compose up -d redis
-            # Wait for Redis to be ready
-            for i in $(seq 1 10); do
-              if docker exec fanqie-redis redis-cli -a "${REDIS_PASSWORD:-fanqie_unidbg_2026}" --no-auth-warning ping 2>/dev/null | grep -q PONG; then
-                echo "Redis READY"
-                break
-              fi
-              sleep 2
-            done
-            
-            # ===== STEP 4: Start unidbg =====
-            echo "Starting unidbg..."
-            : > "$UNIDBG_DIR/unidbg.log"
-            cd "$UNIDBG_DIR"
-            setsid nohup "$JAVA_BIN" \
-              -Xms64m -Xmx192m -XX:MaxMetaspaceSize=96m -XX:MaxDirectMemorySize=64m \
-              -XX:+UseSerialGC -XX:ActiveProcessorCount=1 \
-              -Djava.io.tmpdir=/opt/unidbg/tmp \
-              -jar "$UNIDBG_JAR" \
-              --spring.config.additional-location=file:"$UNIDBG_DIR"/ \
-              > "$UNIDBG_DIR/unidbg.log" 2>&1 < /dev/null &
-            UNIDBG_PID=$!
-            echo $UNIDBG_PID > "$PID_FILE"
-            echo "unidbg PID: $UNIDBG_PID"
-            disown || true
-            
-            # Wait for unidbg
-            echo "Waiting for unidbg to initialize..."
-            UNIDBG_READY=0
-            for i in $(seq 1 24); do
-              sleep 10
-              if ! kill -0 "$UNIDBG_PID" 2>/dev/null; then
-                echo "!!! unidbg died !!!"
-                tail -50 "$UNIDBG_DIR/unidbg.log"
-                break
-              fi
-              CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://127.0.0.1:8099/api/fq-signature/test 2>/dev/null || echo "000")
-              echo "unidbg check $i: HTTP $CODE (free: $(free -m | awk '/Mem:/{print $4}')M, disk: $(df -h / | awk 'NR==2{print $4}'))"
-              if [ "$CODE" != "000" ] && [ "$CODE" != "502" ] && [ "$CODE" != "503" ]; then
-                UNIDBG_READY=1
-                break
-              fi
-            done
-            
-            if [ "$UNIDBG_READY" != "1" ]; then
-              echo "!!! unidbg not ready !!!"
-              tail -50 "$UNIDBG_DIR/unidbg.log"
-              free -h
-              df -h /
-            else
-              echo "unidbg READY!"
-            fi
-            
-            # ===== STEP 5: Build & start web reader =====
-            cd /projects/fanqie-web-reader
-            echo "=== Disk before docker build ==="
-            df -h /
-            docker system prune -f 2>/dev/null || true
-            
-            echo "Building web reader..."
             export APP_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0-dev")
             echo "APP_VERSION=$APP_VERSION"
-            docker compose build --no-cache fanqie-web-reader
+
+            echo "Building fqapi + web reader (first fqapi build may take several minutes)..."
+            docker compose build
             docker compose up -d
-            
-            sleep 8
-            
-            # ===== STEP 6: Verify =====
+
+            echo "Waiting for fqapi readiness..."
+            FQAPI_READY=0
+            for i in $(seq 1 40); do
+              if curl -fsS --connect-timeout 3 http://127.0.0.1:18921/readyz >/dev/null 2>&1 \
+                || docker exec fanqie-fqapi curl -fsS http://127.0.0.1:18921/readyz >/dev/null 2>&1; then
+                echo "fqapi READY"
+                FQAPI_READY=1
+                break
+              fi
+              echo "fqapi check $i ..."
+              sleep 3
+            done
+            if [ "$FQAPI_READY" != "1" ]; then
+              echo "!!! fqapi never became ready !!!"
+              docker compose logs --tail=80 fqapi || true
+              exit 1
+            fi
+
+            sleep 5
             echo "=== Final ==="
             docker compose ps
-            curl -s -o /dev/null -w "Web reader HTTP %{http_code}\n" http://127.0.0.1:8199/api/health || echo "Web reader not ready"
-            UNIDBG_FINAL=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8099/api/fq-signature/test 2>/dev/null || echo "000")
-            echo "Unidbg HTTP $UNIDBG_FINAL"
+            WEB_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8199/api/health || echo 000)
+            echo "Web reader HTTP $WEB_CODE"
+            if [ "$WEB_CODE" != "200" ]; then
+              echo "!!! web reader health check failed !!!"
+              docker compose logs --tail=80 fanqie-web-reader || true
+              exit 1
+            fi
+            curl -fsS http://127.0.0.1:18921/healthz || docker exec fanqie-fqapi curl -fsS http://127.0.0.1:18921/healthz
             free -h
             df -h /
             docker image prune -f

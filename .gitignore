@@ -15,6 +15,11 @@ unidbg/unidbg-boot-server.jar
 unidbg/
 jre/
 .jre_tmp/
+fqapi/fqapi-server
+fqapi/fqapi-server.exe
+fqapi/data/
+fqapi/*.log
+.fqapi_src/
 docs/fanqie-api.md
 docs/login-plan.md
 
