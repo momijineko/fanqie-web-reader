@@ -389,6 +389,15 @@ function _loadProgressRetryQueue() {
 function _saveProgressRetryQueue(q) {
   localStorage.setItem(_CLOUD_PROGRESS_RETRY_KEY, JSON.stringify(q.slice(-20)));
 }
+/** Keep only the latest payload per book so older failed uploads cannot overwrite newer progress. */
+function _upsertProgressRetry(payload) {
+  const q = _loadProgressRetryQueue().filter(p => p.book_id !== payload.book_id);
+  q.push(payload);
+  _saveProgressRetryQueue(q);
+}
+function _dropProgressRetryForBook(bookId) {
+  _saveProgressRetryQueue(_loadProgressRetryQueue().filter(p => p.book_id !== String(bookId)));
+}
 
 async function flushCloudProgress() {
   clearTimeout(_cloudProgressTimer);
@@ -404,19 +413,19 @@ async function flushCloudProgress() {
     });
     const data = await r.json().catch(() => ({}));
     if (!r.ok || data.code !== 200) throw new Error(data.msg || 'progress sync failed');
+    // Successful newer upload supersedes any queued older payload for this book
+    _dropProgressRetryForBook(payload.book_id);
   } catch (e) {
-    const q = _loadProgressRetryQueue();
-    const last = q[q.length - 1];
-    if (!last || last.book_id !== payload.book_id || last.item_id !== payload.item_id || last.index !== payload.index) {
-      q.push(payload);
-      _saveProgressRetryQueue(q);
-    }
+    _upsertProgressRetry(payload);
   }
 }
 
 async function retryCloudProgressQueue() {
   if (typeof _profileUser === 'undefined' || !_profileUser) return;
-  const q = _loadProgressRetryQueue();
+  // Dedupe by book_id (keep latest) before retrying
+  const byBook = new Map();
+  for (const p of _loadProgressRetryQueue()) byBook.set(p.book_id, p);
+  const q = Array.from(byBook.values());
   if (!q.length) return;
   const remaining = [];
   for (const payload of q) {

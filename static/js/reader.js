@@ -49,7 +49,17 @@ function saveReaderProgress(bid, idx, chapterId, chapterTitle, total, offset) {
   const csid = String(chapterId);
   if (!data.stats.readSet.includes(csid)) { data.stats.readSet.push(csid); data.stats.chaptersRead = data.stats.readSet.length; saveStats(data.stats); }
   queueCloudProgress(bid, chapterId, idx);
-  try { localStorage.setItem('scroll_' + chapterId, String(offset && offset.scrollY != null ? offset.scrollY : (getReadMode() === 'scroll' ? window.scrollY : 0))); } catch (e) {}
+  try {
+    if (offset && offset.scrollY != null) {
+      localStorage.setItem('scroll_' + chapterId, String(offset.scrollY));
+    } else if (sameChapter && getReadMode() === 'scroll') {
+      localStorage.setItem('scroll_' + chapterId, String(window.scrollY));
+    } else if (!sameChapter) {
+      // Chapter changed without an explicit scroll offset — never inherit the
+      // previous chapter's window.scrollY under the new chapter id.
+      localStorage.setItem('scroll_' + chapterId, '0');
+    }
+  } catch (e) {}
 }
 
 function capturePageOffset() {
@@ -251,7 +261,8 @@ function setupScrollAutoNext(bid, idx) {
   autoNextObserver = new IntersectionObserver(async (entries) => {
     for (const entry of entries) {
       if (!entry.isIntersecting) continue;
-      const nextIdx = currentChapterIdx + appendedChapters + 1;
+      // currentChapterIdx already advances on each append — do not also add appendedChapters
+      const nextIdx = currentChapterIdx + 1;
       if (nextIdx >= d.chapters.length) continue;
       const indicator = $('autoNextIndicator');
       if (indicator) indicator.classList.remove('hidden');
@@ -270,7 +281,8 @@ function setupScrollAutoNext(bid, idx) {
           currentChapterKey = nextChapterId;
           loadParaCommentCounts(nextChapterId);
           const nextTitle = d.chapters[nextIdx].Name || `第${nextIdx+1}章`;
-          saveReaderProgress(bid, nextIdx, nextChapterId, nextTitle, d.chapters.length, { scrollY: window.scrollY, paraIdx: 0, charOffset: 0 });
+          // scrollY:0 — continuous-document Y must not be stored under the new chapter id
+          saveReaderProgress(bid, nextIdx, nextChapterId, nextTitle, d.chapters.length, { scrollY: 0, paraIdx: 0, charOffset: 0 });
           const headerName = document.querySelector('.scroll-reader .chapter-name');
           if (headerName) headerName.textContent = nextTitle;
           // Keep hash in sync so mode switch / refresh resumes the appended chapter
@@ -452,13 +464,6 @@ function renderPageReader(app, bid, idx) {
 }
 
 // ====== Page calculation ======
-function _parseParaPiece(ph) {
-  // Matches para-wrap with optional data-* attrs and optional badge span
-  const m = ph.match(/^<div class="para-wrap" data-para-idx="(\d+)"[^>]*><p>([\s\S]*?)(?:<span class="para-badge"[\s\S]*?<\/span>)?<\/p><\/div>$/);
-  if (!m) return null;
-  return { paraIdx: parseInt(m[1], 10), text: m[2] };
-}
-
 function _pieceHtml(paraIdx, text, charOffset, withBadge) {
   const badge = withBadge
     ? `<span class="para-badge" data-para-idx="${paraIdx}" onclick="event.stopPropagation();openParaComment(${paraIdx})"></span>`
@@ -489,34 +494,32 @@ function pgCalculatePages(restoreOffset) {
   const paras = c.paragraphs;
   const authorSpeak = c.authorSpeak;
 
-  const paraHtmls = [];
-  const paraMeta = [];
+  // Build layout items: plain-text paras are split before escaping so entities stay intact
+  const items = [];
   for (let pi = 0; pi < paras.length; pi++) {
     const text = paras[pi];
     if (!text) continue;
     const imgMatch = text.match(/^https?:\/\/\S+\.(jpg|jpeg|png|webp|gif)(\?\S*)?$/i);
     if (imgMatch) {
-      paraHtmls.push(`<img class="content-img" src="${safeImgUrl(text)}">`);
-      paraMeta.push({ paraIdx: pi, charOffset: 0 });
+      items.push({ kind: 'html', html: `<img class="content-img" src="${safeImgUrl(text)}">`, meta: { paraIdx: pi, charOffset: 0 } });
       continue;
     }
     const innerImgs = text.match(/<img[^>]+src="([^"]+)"[^>]*>/gi);
     if (innerImgs) {
       innerImgs.forEach(imgTag => {
         const src = imgTag.match(/src="([^"]+)"/);
-        if (src) {
-          paraHtmls.push(`<img class="content-img" src="${safeImgUrl(src[1])}">`);
-          paraMeta.push({ paraIdx: pi, charOffset: 0 });
-        }
+        if (src) items.push({ kind: 'html', html: `<img class="content-img" src="${safeImgUrl(src[1])}">`, meta: { paraIdx: pi, charOffset: 0 } });
       });
       continue;
     }
-    paraHtmls.push(_pieceHtml(pi, escapeHtml(text), 0, true));
-    paraMeta.push({ paraIdx: pi, charOffset: 0 });
+    items.push({ kind: 'para', paraIdx: pi, text });
   }
   if (authorSpeak) {
-    paraHtmls.push(`<div class="author-speak"><i data-lucide="message-circle" width="14" height="14"></i> 作者说：${escapeHtml(authorSpeak)}</div>`);
-    paraMeta.push({ paraIdx: paras.length, charOffset: 0 });
+    items.push({
+      kind: 'html',
+      html: `<div class="author-speak"><i data-lucide="message-circle" width="14" height="14"></i> 作者说：${escapeHtml(authorSpeak)}</div>`,
+      meta: { paraIdx: paras.length, charOffset: 0 },
+    });
   }
 
   const measurer = document.createElement('div');
@@ -547,12 +550,14 @@ function pgCalculatePages(restoreOffset) {
     currentMeta = null;
   };
 
-  const appendSplittable = (paraIdx, fullText, startOffset) => {
-    let remaining = fullText;
+  const appendSplittable = (paraIdx, plainText, startOffset) => {
+    // Split on plain text, escape each chunk when building HTML (avoids cutting mid-entity)
+    const chunk = (plain, off, withBadge) => _pieceHtml(paraIdx, escapeHtml(plain), off, withBadge);
+    let remaining = plainText;
     let offset = startOffset;
     let firstChunk = true;
     while (remaining.length > 0) {
-      const candidate = currentPage + _pieceHtml(paraIdx, remaining, offset, firstChunk);
+      const candidate = currentPage + chunk(remaining, offset, firstChunk);
       if (!overflows(candidate)) {
         if (!currentMeta) currentMeta = { paraIdx, charOffset: offset };
         currentPage = candidate;
@@ -561,13 +566,13 @@ function pgCalculatePages(restoreOffset) {
       let lo = 0, hi = remaining.length, best = 0;
       while (lo <= hi) {
         const mid = Math.floor((lo + hi) / 2);
-        const trial = currentPage + _pieceHtml(paraIdx, remaining.substring(0, mid), offset, firstChunk && mid > 0);
+        const trial = currentPage + chunk(remaining.substring(0, mid), offset, firstChunk && mid > 0);
         if (!overflows(trial) && mid > 0) { best = mid; lo = mid + 1; }
         else hi = mid - 1;
       }
       if (best > 0) {
         if (!currentMeta) currentMeta = { paraIdx, charOffset: offset };
-        currentPage += _pieceHtml(paraIdx, remaining.substring(0, best), offset, firstChunk);
+        currentPage += chunk(remaining.substring(0, best), offset, firstChunk);
         pushPage();
         remaining = remaining.substring(best);
         offset += best;
@@ -576,7 +581,7 @@ function pgCalculatePages(restoreOffset) {
         pushPage();
       } else {
         currentMeta = { paraIdx, charOffset: offset };
-        currentPage = _pieceHtml(paraIdx, remaining.substring(0, 1), offset, firstChunk);
+        currentPage = chunk(remaining.substring(0, 1), offset, firstChunk);
         pushPage();
         remaining = remaining.substring(1);
         offset += 1;
@@ -585,14 +590,13 @@ function pgCalculatePages(restoreOffset) {
     }
   };
 
-  for (let i = 0; i < paraHtmls.length; i++) {
-    const ph = paraHtmls[i];
-    const meta = paraMeta[i];
-    const parsed = _parseParaPiece(ph);
-    if (parsed) {
-      appendSplittable(parsed.paraIdx, parsed.text, 0);
+  for (const item of items) {
+    if (item.kind === 'para') {
+      appendSplittable(item.paraIdx, item.text, 0);
       continue;
     }
+    const ph = item.html;
+    const meta = item.meta;
     const candidate = currentPage + ph;
     if (overflows(candidate)) {
       pushPage();
