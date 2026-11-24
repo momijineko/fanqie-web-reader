@@ -48,12 +48,22 @@ jobs:
             test -n "$EXPECTED_SHA"
             test "${#EXPECTED_SHA}" -eq 40
 
+            # Same flock as native-deploy.sh and the VPS timer. Hold it across
+            # git fetch, script install, and the deploy child (fd 9 is inherited).
+            LOCK_FILE="${FANQIE_DEPLOY_LOCK:-/tmp/fanqie-deploy.lock}"
+            exec 9>"$LOCK_FILE"
+            if ! flock -w 600 9; then
+              echo "REFUSING deploy: could not acquire $LOCK_FILE within 600s"
+              exit 1
+            fi
+            export FANQIE_DEPLOY_LOCK_HELD=1
+
             export GIT_HTTP_LOW_SPEED_LIMIT=1000
             export GIT_HTTP_LOW_SPEED_TIME=45
             cd "$APP_DIR"
 
             # Fetch the pin for script extraction only — do NOT reset the live tree
-            # here. native-deploy.sh owns reset + restart and compares PREV_HEAD.
+            # here. native-deploy.sh owns reset + restart.
             fetch_pin() {
               local url="$1"
               git remote set-url origin "$url"

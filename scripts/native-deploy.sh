@@ -8,13 +8,19 @@
 #    content-addressed fallback. A mirror cannot substitute different code for
 #    the same SHA.
 # 3. Refuse to continue unless HEAD == EXPECTED_SHA after reset.
-# 4. Skip pip/restart when already on that SHA + APP_VERSION and services healthy
-#    (set FORCE_DEPLOY=1 to override).
+# 4. Skip pip/restart only when the last successful activation recorded that
+#    SHA + APP_VERSION and services are healthy (set FORCE_DEPLOY=1 to override).
+#    HEAD and .env are written before pip/restart, so they are not proof of
+#    what the live processes loaded.
 set -euo pipefail
 APP_DIR="${HOME}/fanqie-web-reader"
+# Recorded only after fqapi and web are confirmed up on this pin.
+ACTIVATED_FILE="${HOME}/.fanqie-deploy-activated"
 cd "$APP_DIR"
 
 # Serialize Actions SSH + local timer against the same tree.
+# Callers that fetch or replace $HOME/bin/native-deploy.sh first (deploy.yml)
+# must flock this file and export FANQIE_DEPLOY_LOCK_HELD=1.
 # Parent (timer) may set FANQIE_DEPLOY_LOCK_HELD=1 after acquiring the same lock.
 if [ "${FANQIE_DEPLOY_LOCK_HELD:-0}" != "1" ]; then
   LOCK_FILE="${FANQIE_DEPLOY_LOCK:-/tmp/fanqie-deploy.lock}"
@@ -69,10 +75,14 @@ fetch_sha() {
   return 1
 }
 
-services_healthy() {
+fqapi_healthy() {
   curl -fsS --noproxy '*' --connect-timeout 3 http://127.0.0.1:18921/readyz >/dev/null 2>&1 \
+    && [ "$(systemctl --user is-active fanqie-fqapi.service || true)" = "active" ]
+}
+
+services_healthy() {
+  fqapi_healthy \
     && curl -fsS --noproxy '*' --connect-timeout 3 http://127.0.0.1:8199/api/health >/dev/null 2>&1 \
-    && [ "$(systemctl --user is-active fanqie-fqapi.service || true)" = "active" ] \
     && [ "$(systemctl --user is-active fanqie-web.service || true)" = "active" ]
 }
 
@@ -96,7 +106,6 @@ EXPECTED_SHA=$(printf '%s' "$EXPECTED_SHA" | tr '[:upper:]' '[:lower:]')
 echo "EXPECTED_SHA=$EXPECTED_SHA"
 
 PREV_HEAD=$(git rev-parse HEAD 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo "none")
-PREV_VER=$(grep -E '^APP_VERSION=' .env 2>/dev/null | cut -d= -f2- || true)
 
 git remote set-url origin "$GITHUB_URL"
 
@@ -185,16 +194,34 @@ except Exception:
 print(f"APP_VERSION={ver}")
 PY
 
+# Last pin whose restart actually became healthy. Not git HEAD / .env: those
+# are updated before pip and systemctl restart.
+ACTIVATED_SHA=""
+ACTIVATED_VER=""
+if [ -f "$ACTIVATED_FILE" ]; then
+  ACTIVATED_SHA=$(awk 'NR==1 {print; exit}' "$ACTIVATED_FILE" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)
+  ACTIVATED_VER=$(awk 'NR==2 {print; exit}' "$ACTIVATED_FILE" 2>/dev/null || true)
+fi
+case "$ACTIVATED_SHA" in
+  *[!0-9a-f]*) ACTIVATED_SHA="" ;;
+esac
+if [ "${#ACTIVATED_SHA}" -ne 40 ]; then
+  ACTIVATED_SHA=""
+fi
+case "$ACTIVATED_VER" in
+  ''|*[!A-Za-z0-9._+-]*) ACTIVATED_VER="" ;;
+esac
+
 CODE_CHANGED=0
 VERSION_CHANGED=0
-[ "$PREV_HEAD" != "$GOT" ] && CODE_CHANGED=1
-[ "$PREV_VER" != "$VER" ] && VERSION_CHANGED=1
+[ "$ACTIVATED_SHA" != "$GOT" ] && CODE_CHANGED=1
+[ "$ACTIVATED_VER" != "$VER" ] && VERSION_CHANGED=1
 
 if [ "${FORCE_DEPLOY:-0}" != "1" ] \
   && [ "$CODE_CHANGED" = "0" ] \
   && [ "$VERSION_CHANGED" = "0" ] \
   && services_healthy; then
-  echo "Already on $GOT with APP_VERSION=$VER and healthy services — skip pip/restart"
+  echo "Already activated $GOT with APP_VERSION=$VER and healthy services — skip pip/restart"
   exit 0
 fi
 
@@ -208,8 +235,9 @@ python -m pip install -q -U pip -i "$PIP_INDEX"
 python -m pip install -q -r requirements.txt -i "$PIP_INDEX"
 
 systemctl --user daemon-reload
-# Version-only change: restart web (reads APP_VERSION at process start). Code change: both.
-if [ "$CODE_CHANGED" = "1" ] || [ "${FORCE_DEPLOY:-0}" = "1" ]; then
+# Version-only change: restart web (reads APP_VERSION at process start).
+# Code change, forced deploy, or a down fqapi: restart fqapi too.
+if [ "$CODE_CHANGED" = "1" ] || [ "${FORCE_DEPLOY:-0}" = "1" ] || ! fqapi_healthy; then
   systemctl --user restart fanqie-fqapi.service || true
 fi
 systemctl --user restart fanqie-web.service
@@ -252,4 +280,9 @@ if [ "$FQAPI_STATE" != "active" ] || [ "$WEB_STATE" != "active" ]; then
   echo "REFUSING success: both fanqie-fqapi and fanqie-web must be active"
   exit 1
 fi
+# Commit the pin only after the running units match it. A crash before this
+# leaves the previous activation in place so the next timer retries.
+state_tmp=$(mktemp "${ACTIVATED_FILE}.XXXXXX")
+printf '%s\n%s\n' "$GOT" "$VER" > "$state_tmp"
+mv -f "$state_tmp" "$ACTIVATED_FILE"
 echo "Deployment completed successfully!"
