@@ -774,6 +774,7 @@ async function _tryAutoLogin() {
       saveCachedUser(_profileUser);
       _autoLoginPending = false;
       await _loadOnlineShelf();
+      retryCloudProgressQueue();
       router();
       return;
     }
@@ -985,6 +986,7 @@ async function _afterLoginSuccess(toastMsg, failMsg) {
       saveCachedUser(_profileUser);
       _autoLoginPending = false;
       _loadOnlineShelf();
+      retryCloudProgressQueue();
       renderProfile($('app'));
       showToast(toastMsg + ' · 云端与本地书架独立存储');
       return;

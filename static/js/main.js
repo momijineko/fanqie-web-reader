@@ -49,13 +49,15 @@ function router() {
       const d = cache.detail[currentBookId];
       const ch = d.chapters[currentChapterIdx];
       if (ch) {
-        saveReaderProgress(currentBookId, currentChapterIdx, ch.ChapterID, ch.Name || '', d.chapters.length, {
-          scrollY: window.scrollY,
-          paraIdx: 0,
-          charOffset: 0,
-        });
+        // Keep the visible paragraph anchor so page-mode resume is not wiped to 0
+        const offset = typeof captureVisibleScrollOffset === 'function'
+          ? captureVisibleScrollOffset()
+          : { scrollY: window.scrollY, paraIdx: 0, charOffset: 0 };
+        saveReaderProgress(currentBookId, currentChapterIdx, ch.ChapterID, ch.Name || '', d.chapters.length, offset);
       }
     }
+    if (typeof teardownScrollProgressSave === 'function') teardownScrollProgressSave();
+    if (autoNextObserver) { autoNextObserver.disconnect(); autoNextObserver = null; }
     currentChapterKey = null;
   }
   if (!path.startsWith('reader')) { appendedChapters = 0; }
@@ -301,6 +303,8 @@ _profileUser = getCachedUser();
 _onlineShelf = getCachedShelf();
 router();
 _tryAutoLogin();
+// Retry any cloud progress that failed in a previous session (visibilitychange alone won't fire at load)
+if (_profileUser) retryCloudProgressQueue();
 
 // Service Worker
 if ('serviceWorker' in navigator) {

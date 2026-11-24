@@ -63,14 +63,16 @@ function saveReaderProgress(bid, idx, chapterId, chapterTitle, total, offset) {
 }
 
 function capturePageOffset() {
+  // Always clear scrollY in page mode so a prior scroll-mode offset cannot block para restore
   if (!pg.pagesMeta || !pg.pagesMeta.length) {
-    return { paraIdx: 0, charOffset: 0, pageRatio: pg.totalPages > 1 ? pg.curPage / (pg.totalPages - 1) : 0 };
+    return { paraIdx: 0, charOffset: 0, pageRatio: pg.totalPages > 1 ? pg.curPage / (pg.totalPages - 1) : 0, scrollY: 0 };
   }
   const meta = pg.pagesMeta[Math.min(pg.curPage, pg.pagesMeta.length - 1)] || { paraIdx: 0, charOffset: 0 };
   return {
     paraIdx: meta.paraIdx || 0,
     charOffset: meta.charOffset || 0,
     pageRatio: pg.totalPages > 1 ? pg.curPage / (pg.totalPages - 1) : 0,
+    scrollY: 0,
   };
 }
 
@@ -225,27 +227,42 @@ function renderScrollReader(app, bid, idx) {
   refreshIcons(app);
 }
 
-function setupScrollProgressSave(bid, idx, chapterId, chapterTitle, total) {
+function teardownScrollProgressSave() {
   if (_scrollProgressTimer) clearTimeout(_scrollProgressTimer);
+  _scrollProgressTimer = 0;
+  if (window._scrollProgressOnScroll) {
+    window.removeEventListener('scroll', window._scrollProgressOnScroll);
+    window._scrollProgressOnScroll = null;
+  }
+}
+
+function captureVisibleScrollOffset() {
+  const offset = { scrollY: window.scrollY, paraIdx: 0, charOffset: 0 };
+  const wraps = document.querySelectorAll('#readerContent .para-wrap[data-para-idx]');
+  for (const wrap of wraps) {
+    const rect = wrap.getBoundingClientRect();
+    if (rect.bottom > 80) {
+      offset.paraIdx = parseInt(wrap.dataset.paraIdx, 10) || 0;
+      break;
+    }
+  }
+  return offset;
+}
+
+function setupScrollProgressSave(bid, idx, chapterId, chapterTitle, total) {
+  teardownScrollProgressSave();
   const onScrollSave = () => {
     clearTimeout(_scrollProgressTimer);
     _scrollProgressTimer = setTimeout(() => {
-      if (currentBookId !== bid) return;
-      const offset = { scrollY: window.scrollY, paraIdx: 0, charOffset: 0 };
-      // Prefer the first visible paragraph as anchor for cross-mode resume
-      const wraps = document.querySelectorAll('#readerContent .para-wrap[data-para-idx]');
-      for (const wrap of wraps) {
-        const rect = wrap.getBoundingClientRect();
-        if (rect.bottom > 80) {
-          offset.paraIdx = parseInt(wrap.dataset.paraIdx, 10) || 0;
-          break;
-        }
-      }
-      saveReaderProgress(bid, currentChapterIdx, cache.detail[bid].chapters[currentChapterIdx].ChapterID,
-        cache.detail[bid].chapters[currentChapterIdx].Name || chapterTitle, total, offset);
+      // Bail once the scroll reader is gone (listener must not survive navigation)
+      if (currentBookId !== bid || !$('scrollReader') || getReadMode() !== 'scroll') return;
+      const d = cache.detail[bid];
+      if (!d || !d.chapters[currentChapterIdx]) return;
+      const offset = captureVisibleScrollOffset();
+      const ch = d.chapters[currentChapterIdx];
+      saveReaderProgress(bid, currentChapterIdx, ch.ChapterID, ch.Name || chapterTitle, total, offset);
     }, 600);
   };
-  window.removeEventListener('scroll', window._scrollProgressOnScroll);
   window._scrollProgressOnScroll = onScrollSave;
   window.addEventListener('scroll', onScrollSave, { passive: true });
 }
