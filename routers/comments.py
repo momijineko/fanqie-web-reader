@@ -208,15 +208,35 @@ def _extract_para_counts(raw) -> dict:
 async def paragraph_comments(body: ParaCommentsPayload):
     """Get paragraph comments.
 
-    fqapi 的 paragraphs/{n}/reviews 路由目前映射到 idea_list（只有计数），
-    book_reviews 对段评枚举组合会 103001，因此段评正文优先走可选 unidbg；
-    两者都不可用时返回空列表（徽章计数仍可由 idea_list 提供）。
+    fqapi book_reviews 对 aid=1967 需 server_channel=9（阅读器列表常用的 18
+    会 103001）。unidbg 仍用其原 channel=18。计数继续走 idea_list。
     """
     chapter_id = require_resource_id(body.chapter_id, "chapter_id")
     book_id = require_resource_id(body.book_id, "book_id") if body.book_id else ""
     if PARA_COMMENT_MOCK:
         return {"code": 200, "data": _mock_para_comments(chapter_id, body.paragraph_idx), "msg": "success (mock)"}
 
+    # 1) fqapi：channel=9 可出段评正文（与 unidbg 的 18 不同）
+    if book_id:
+        raw = await fqapi_get(
+            f"/api/v1/books/{book_id}/reviews",
+            params={
+                "group_id": chapter_id,
+                "group_type": 15,
+                "comment_source": 2,
+                "comment_type": 1,
+                "server_channel": 9,
+                "para_index": body.paragraph_idx,
+                "count": body.count,
+                "item_version": "1",
+            },
+        )
+        if raw is not None and raw.get("code") in (0, 200, None):
+            comments = _normalize_comments(raw)
+            if comments:
+                return {"code": 200, "data": comments, "msg": "success"}
+
+    # 2) 可选 unidbg（其设备/aid 下仍用 channel 18）
     if UNIDBG_API:
         try:
             r = await _fanqie_client.post(
@@ -240,26 +260,6 @@ async def paragraph_comments(body: ParaCommentsPayload):
                 "paragraph_comments unidbg 失败 chapter_id=%s idx=%d: %s",
                 chapter_id, body.paragraph_idx, e, exc_info=True,
             )
-
-    # 尽力从 fqapi idea_list 的 infos 里抽（通常无正文，仅作兜底）
-    if book_id:
-        raw = await fqapi_get(
-            f"/api/v1/books/{book_id}/reviews",
-            params={
-                "group_id": chapter_id,
-                "group_type": 15,
-                "comment_source": 2,
-                "comment_type": 1,
-                "server_channel": 18,
-                "para_index": body.paragraph_idx,
-                "count": body.count,
-                "item_version": "1",
-            },
-        )
-        if raw is not None and raw.get("code") in (0, 200, None):
-            comments = _normalize_comments(raw)
-            if comments:
-                return {"code": 200, "data": comments, "msg": "success"}
 
     return {"code": 200, "data": [], "msg": "no paragraph comments"}
 
