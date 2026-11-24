@@ -131,9 +131,13 @@ case "$VER" in
     exit 1
     ;;
 esac
-# Rewrite APP_VERSION without sed (tag names must not reach the shell as code).
+# Rewrite APP_VERSION without sed; write tempfile then os.replace (atomic).
 python3 - "$VER" <<'PY'
-import pathlib, sys
+import os
+import pathlib
+import sys
+import tempfile
+
 ver = sys.argv[1]
 path = pathlib.Path(".env")
 lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
@@ -146,7 +150,22 @@ for line in lines:
         out.append(line)
 if not found:
     out.append(f"APP_VERSION={ver}")
-path.write_text("\n".join(out) + "\n", encoding="utf-8")
+payload = "\n".join(out) + "\n"
+fd, tmp_name = tempfile.mkstemp(
+    prefix=".env.", suffix=".tmp", dir=str(path.parent.resolve())
+)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(payload)
+        fh.flush()
+        os.fsync(fh.fileno())
+    os.replace(tmp_name, path)
+except Exception:
+    try:
+        os.unlink(tmp_name)
+    except OSError:
+        pass
+    raise
 print(f"APP_VERSION={ver}")
 PY
 
