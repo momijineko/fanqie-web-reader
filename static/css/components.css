@@ -41,6 +41,7 @@
 .comment-reply .comment-item:last-child { border-bottom: none; padding-bottom: 0; }
 .comment-reply .comment-item:first-child { padding-top: 0; }
 .comment-reply .comment-user { font-size: var(--fs-xs); color: var(--text-secondary); font-weight: 600; }
+.comment-reply .comment-reply-to { font-weight: 400; color: var(--text-muted); margin: 0 2px; }
 .comment-reply .comment-text { font-size: var(--fs-sm); margin-top: 1px; color: var(--text); line-height: var(--lh-normal); }
 .comment-reply .comment-avatar { width: 24px; height: 24px; }
 

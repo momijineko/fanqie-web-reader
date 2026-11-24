@@ -1402,10 +1402,15 @@ function renderCommentItems(list) {
       for (const rc of reply.slice(0,3)) {
         const rcUser = rc.user_name || (rc.user_info && rc.user_info.user_name) || rc.nick_name || '匿名';
         const rcAvatar = rc.avatar_url || (rc.user_info && (rc.user_info.user_avatar || rc.user_info.avatar_url)) || '';
+        const rcTo = rc.reply_to_user_name || '';
+        const rcText = rc.content || rc.text || '';
+        const rcUserLine = rcTo
+          ? `${escapeHtml(rcUser)} <span class="comment-reply-to">回复</span> ${escapeHtml(rcTo)}`
+          : escapeHtml(rcUser);
         const rcAvatarHtml = rcAvatar
           ? `<img class="comment-avatar comment-avatar-sm" src="${safeImgUrl(rcAvatar)}" alt="" loading="lazy" onerror="this.style.display='none'">`
           : `<div class="comment-avatar comment-avatar-sm comment-avatar-placeholder">${escapeHtml((rcUser||'匿')[0])}</div>`;
-        html += `<div class="comment-item">${rcAvatarHtml}<div class="comment-body"><div class="comment-user">${escapeHtml(rcUser)}</div><div class="comment-text">${escapeHtml(rc.content||rc.text||'')}</div></div></div>`;
+        html += `<div class="comment-item">${rcAvatarHtml}<div class="comment-body"><div class="comment-user">${rcUserLine}</div><div class="comment-text">${escapeHtml(rcText)}</div></div></div>`;
       }
       html += '</div>';
     }

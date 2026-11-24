@@ -17,7 +17,8 @@ _FQAPI_ALLOWED_PATH_RE = re.compile(
     r"^/api/v1/(?:"
     r"search|"
     r"books/\d{1,32}(?:/directory|/reviews)?|"
-    r"chapters/\d{1,32}(?:/reviews)?"
+    r"chapters/\d{1,32}(?:/reviews)?|"
+    r"comments/\d{1,32}/replies"
     r")$"
 )
 

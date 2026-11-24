@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import time
 from urllib.parse import urlparse
@@ -16,6 +17,11 @@ from shared import (
     logger,
     require_resource_id,
 )
+
+# 段评列表不含楼中楼正文，需另调 reply/list。限制并发与条数，避免拖慢面板打开。
+_REPLY_ENRICH_MAX_COMMENTS = 8
+_REPLY_ENRICH_PER_COMMENT = 5
+_REPLY_ENRICH_CONCURRENCY = 4
 
 router = APIRouter()
 
@@ -210,11 +216,15 @@ async def paragraph_comments(body: ParaCommentsPayload):
 
     fqapi book_reviews 对 aid=1967 需 server_channel=9（阅读器列表常用的 18
     会 103001）。unidbg 仍用其原 channel=18。计数继续走 idea_list。
+
+    段评列表只带 reply_count，楼中楼正文需另调 reply/list 再拼进 reply_list。
     """
     chapter_id = require_resource_id(body.chapter_id, "chapter_id")
     book_id = require_resource_id(body.book_id, "book_id") if body.book_id else ""
     if PARA_COMMENT_MOCK:
         return {"code": 200, "data": _mock_para_comments(chapter_id, body.paragraph_idx), "msg": "success (mock)"}
+
+    comments: list = []
 
     # 1) fqapi：channel=9 可出段评正文（与 unidbg 的 18 不同）
     if book_id:
@@ -233,11 +243,9 @@ async def paragraph_comments(body: ParaCommentsPayload):
         )
         if raw is not None and raw.get("code") in (0, 200, None):
             comments = _normalize_comments(raw)
-            if comments:
-                return {"code": 200, "data": comments, "msg": "success"}
 
     # 2) 可选 unidbg（其设备/aid 下仍用 channel 18）
-    if UNIDBG_API:
+    if not comments and UNIDBG_API:
         try:
             r = await _fanqie_client.post(
                 f"{UNIDBG_API}/api/fqcomment/list",
@@ -254,15 +262,102 @@ async def paragraph_comments(body: ParaCommentsPayload):
                 timeout=20.0,
             )
             comments = _normalize_comments(r.json())
-            return {"code": 200, "data": comments, "msg": "success"}
         except Exception as e:
             logger.warning(
                 "paragraph_comments unidbg 失败 chapter_id=%s idx=%d: %s",
                 chapter_id, body.paragraph_idx, e, exc_info=True,
             )
 
+    if comments:
+        await _enrich_comments_with_replies(comments, book_id=book_id, chapter_id=chapter_id)
+        return {"code": 200, "data": comments, "msg": "success"}
+
     return {"code": 200, "data": [], "msg": "no paragraph comments"}
 
+
+async def _enrich_comments_with_replies(comments: list, book_id: str, chapter_id: str) -> None:
+    """Fill reply_list for comments that only expose reply_count."""
+    if not book_id or not chapter_id:
+        return
+    targets = []
+    for c in comments:
+        if not isinstance(c, dict):
+            continue
+        existing = c.get("reply_list")
+        if isinstance(existing, list) and existing:
+            continue
+        reply_count = c.get("reply_count") or 0
+        comment_id = str(c.get("comment_id") or "").strip()
+        try:
+            reply_count = int(reply_count)
+        except (TypeError, ValueError):
+            reply_count = 0
+        if reply_count > 0 and comment_id and comment_id.isdigit():
+            targets.append(c)
+        if len(targets) >= _REPLY_ENRICH_MAX_COMMENTS:
+            break
+    if not targets:
+        return
+
+    sem = asyncio.Semaphore(_REPLY_ENRICH_CONCURRENCY)
+
+    async def _one(c: dict):
+        async with sem:
+            replies = await _fetch_comment_replies(
+                comment_id=str(c["comment_id"]),
+                book_id=book_id,
+                chapter_id=chapter_id,
+                count=_REPLY_ENRICH_PER_COMMENT,
+            )
+            if replies:
+                c["reply_list"] = replies
+
+    await asyncio.gather(*[_one(c) for c in targets], return_exceptions=True)
+
+
+async def _fetch_comment_replies(
+    comment_id: str,
+    book_id: str,
+    chapter_id: str,
+    count: int = _REPLY_ENRICH_PER_COMMENT,
+) -> list:
+    """Fetch nested replies for one paragraph comment via fqapi, then unidbg."""
+    comment_id = require_resource_id(comment_id, "comment_id")
+    book_id = require_resource_id(book_id, "book_id")
+    chapter_id = require_resource_id(chapter_id, "chapter_id")
+
+    raw = await fqapi_get(
+        f"/api/v1/comments/{comment_id}/replies",
+        params={
+            "book_id": book_id,
+            "group_id": chapter_id,
+            "count": count,
+        },
+    )
+    if raw is not None:
+        replies = _normalize_replies(raw)
+        if replies:
+            return replies
+
+    if UNIDBG_API:
+        try:
+            r = await _fanqie_client.post(
+                f"{UNIDBG_API}/api/fqcomment/reply/list",
+                json={
+                    "commentId": comment_id,
+                    "bookId": book_id,
+                    "chapterId": chapter_id,
+                    "count": count,
+                },
+                timeout=15.0,
+            )
+            return _normalize_replies(r.json())
+        except Exception as e:
+            logger.warning(
+                "paragraph reply list unidbg 失败 comment_id=%s: %s",
+                comment_id, e, exc_info=True,
+            )
+    return []
 
 def _mock_para_comments(chapter_id: str, paragraph_idx: int) -> list:
     """Generate mock paragraph comments for local development."""
@@ -295,16 +390,20 @@ def _mock_para_comments(chapter_id: str, paragraph_idx: int) -> list:
         user_idx = (seed + i) % len(users)
         text_idx = (seed + i * 3) % len(texts)
         comment = {
+            "comment_id": str(10_000_000_000 + (seed % 1_000_000) * 10 + i),
             "user_name": users[user_idx]["name"],
             "avatar_url": users[user_idx]["avatar"],
             "content": texts[text_idx],
             "create_time": now - (i + 1) * 3600 * ((seed % 24) + 1),
             "digg_count": (seed + i) % 50,
+            "reply_count": 0,
         }
         if i == 0 and seed % 4 == 0:
             comment["images"] = ["https://picsum.photos/seed/para{}_{}/300/200".format(paragraph_idx, i)]
-        if i == 0 and seed % 3 == 0:
+        # First comment usually has nested replies so mock UI covers 楼中楼.
+        if i == 0:
             reply_user = users[(user_idx + 2) % len(users)]
+            comment["reply_count"] = 1
             comment["reply_list"] = [
                 {
                     "user_name": reply_user["name"],
@@ -312,6 +411,7 @@ def _mock_para_comments(chapter_id: str, paragraph_idx: int) -> list:
                     "content": "同感！",
                     "create_time": comment["create_time"] + 1800,
                     "digg_count": 3,
+                    "reply_to_user_name": users[user_idx]["name"],
                 }
             ]
         result.append(comment)
@@ -325,6 +425,139 @@ def _fix_img_url(url: str) -> str:
     CDN signature (x-signature is computed over the full path including extension).
     """
     return url or ""
+
+
+def _common_block(obj: dict) -> dict:
+    """Fanqie replies often use capital ``Common``; comments use ``common``."""
+    if not isinstance(obj, dict):
+        return {}
+    c = obj.get("common") or obj.get("Common") or {}
+    return c if isinstance(c, dict) else {}
+
+
+def _normalize_reply_item(rc: dict) -> dict | None:
+    """Flatten one reply/list item (or an embedded reply preview)."""
+    if not isinstance(rc, dict):
+        return None
+    rc_cmt = rc.get("comment") or rc.get("comment_info") or rc
+    if not isinstance(rc_cmt, dict):
+        return None
+    rc_common = _common_block(rc_cmt)
+    # Some payloads put Common on the reply root, not under comment.
+    if not rc_common:
+        rc_common = _common_block(rc)
+
+    rc_user = ""
+    rc_avatar = ""
+
+    def _ru(d):
+        nonlocal rc_user, rc_avatar
+        if not isinstance(d, dict):
+            return
+        if not rc_user:
+            rc_user = d.get("user_name") or d.get("name") or d.get("nick_name") or ""
+        if not rc_avatar:
+            rc_avatar = d.get("user_avatar") or d.get("avatar_url") or d.get("avatar") or ""
+
+    _ru(rc.get("user"))
+    _ru(rc_common.get("user_info"))
+    ui = rc_common.get("user_info")
+    if isinstance(ui, dict):
+        _ru(ui.get("base_info"))
+    if not rc_user:
+        rc_user = rc.get("user_name") or rc.get("nick_name") or "匿名"
+
+    rc_text = ""
+    rc_content = rc_common.get("content") or {}
+    if isinstance(rc_content, dict):
+        rc_text = rc_content.get("text") or ""
+    if not rc_text:
+        rc_text = rc.get("text") or rc.get("content") or ""
+    if isinstance(rc_text, dict):
+        rc_text = rc_text.get("text") or ""
+    if not rc_text:
+        return None
+
+    rc_ts = 0
+    for rts in [
+        rc_common.get("create_timestamp"),
+        rc.get("create_timestamp"),
+        rc.get("create_time"),
+        rc.get("created_ts"),
+    ]:
+        if isinstance(rts, (int, float)) and rts > 0:
+            rc_ts = rts
+            break
+    if isinstance(rc_ts, (int, float)) and rc_ts > 1_000_000_000_000:
+        rc_ts = rc_ts // 1000
+
+    rc_stat = rc.get("stat") if isinstance(rc.get("stat"), dict) else {}
+    rc_digg = (
+        rc_stat.get("digg_count")
+        or rc_common.get("digg_count")
+        or rc.get("digg_count")
+        or rc.get("like_count")
+        or 0
+    )
+    try:
+        rc_digg = int(rc_digg)
+    except (TypeError, ValueError):
+        rc_digg = 0
+
+    out = {
+        "user_name": rc_user,
+        "avatar_url": _fix_img_url(rc_avatar),
+        "content": rc_text,
+        "create_time": rc_ts,
+        "digg_count": rc_digg,
+    }
+    reply_to = ""
+    for src in (
+        rc.get("reply_to_user_info"),
+        rc_common.get("reply_to_user_info"),
+    ):
+        if isinstance(src, dict):
+            base = src.get("base_info") if isinstance(src.get("base_info"), dict) else src
+            reply_to = base.get("user_name") or base.get("nick_name") or ""
+            if reply_to:
+                break
+    if reply_to:
+        out["reply_to_user_name"] = reply_to
+    return out
+
+
+def _normalize_replies(raw) -> list:
+    """Normalize reply/list payloads into the same shape as comment.reply_list."""
+    candidates = []
+
+    def _collect(node, depth=0):
+        if depth > 6:
+            return
+        if isinstance(node, list):
+            candidates.append(node)
+            return
+        if not isinstance(node, dict):
+            return
+        for key in ["reply_list", "replies", "sub_comments", "data_list", "list"]:
+            v = node.get(key)
+            if isinstance(v, list):
+                candidates.append(v)
+        for key in ["data", "detail", "response", "result"]:
+            v = node.get(key)
+            if isinstance(v, (dict, list)):
+                _collect(v, depth + 1)
+
+    _collect(raw)
+    replies = []
+    for cand in candidates:
+        if cand and len(cand) > len(replies):
+            replies = cand
+    out = []
+    for rc in replies[:_REPLY_ENRICH_PER_COMMENT]:
+        flat = _normalize_reply_item(rc)
+        if flat:
+            out.append(flat)
+    return out
 
 
 def _normalize_comments(raw) -> list:
@@ -366,9 +599,9 @@ def _normalize_comments(raw) -> list:
             continue
 
         comment_obj = item.get("comment") or item.get("comment_info") or item
-        common = {}
-        if isinstance(comment_obj, dict):
-            common = comment_obj.get("common") or {}
+        if not isinstance(comment_obj, dict):
+            continue
+        common = _common_block(comment_obj)
 
         user_name = ""
         avatar_url = ""
@@ -382,9 +615,11 @@ def _normalize_comments(raw) -> list:
                 avatar_url = d.get("user_avatar") or d.get("avatar_url") or d.get("avatar") or d.get("head_url") or ""
         _u(item.get("user"))
         _u(item.get("user_info"))
-        _u(item.get("user_info", {}).get("base_info"))
+        _u(item.get("user_info", {}).get("base_info") if isinstance(item.get("user_info"), dict) else None)
         _u(common.get("user_info"))
-        _u(common.get("user_info", {}).get("base_info"))
+        ui = common.get("user_info")
+        if isinstance(ui, dict):
+            _u(ui.get("base_info"))
         if not user_name:
             user_name = item.get("user_name") or item.get("nick_name") or item.get("name") or "匿名"
         if not avatar_url:
@@ -394,7 +629,7 @@ def _normalize_comments(raw) -> list:
         content = common.get("content") or {}
         if isinstance(content, dict):
             text = content.get("text") or content.get("content") or ""
-        if not text and isinstance(comment_obj, dict):
+        if not text:
             text = comment_obj.get("text") or comment_obj.get("content") or ""
         if not text:
             text = item.get("text") or item.get("content") or item.get("comment_text") or item.get("reply_text") or ""
@@ -407,10 +642,10 @@ def _normalize_comments(raw) -> list:
             common.get("digg_count"),
             common.get("like_count"),
             (comment_obj.get("stat") or {}).get("digg_count")
-            if isinstance(comment_obj, dict)
+            if isinstance(comment_obj.get("stat"), dict)
             else None,
             (comment_obj.get("stat") or {}).get("like_count")
-            if isinstance(comment_obj, dict)
+            if isinstance(comment_obj.get("stat"), dict)
             else None,
             (item.get("stat") or {}).get("digg_count")
             if isinstance(item.get("stat"), dict)
@@ -420,10 +655,37 @@ def _normalize_comments(raw) -> list:
                 digg_count = int(src)
                 break
 
+        reply_count = 0
+        for src in (
+            (comment_obj.get("stat") or {}).get("reply_count")
+            if isinstance(comment_obj.get("stat"), dict)
+            else None,
+            (item.get("stat") or {}).get("reply_count")
+            if isinstance(item.get("stat"), dict)
+            else None,
+            item.get("reply_count"),
+            comment_obj.get("reply_count"),
+            common.get("reply_count"),
+            ((comment_obj.get("expand") or {}).get("reply_show_count")
+             if isinstance(comment_obj.get("expand"), dict) else None),
+        ):
+            if isinstance(src, (int, float)) and src > 0:
+                reply_count = int(src)
+                break
+
+        comment_id = (
+            comment_obj.get("comment_id")
+            or item.get("comment_id")
+            or common.get("comment_id")
+            or ""
+        )
+        if comment_id is not None:
+            comment_id = str(comment_id).strip()
+
         ts = 0
         for tsrc in [
             common.get("create_timestamp"),
-            comment_obj.get("create_timestamp") if isinstance(comment_obj, dict) else None,
+            comment_obj.get("create_timestamp"),
             item.get("created_ts"),
             item.get("create_timestamp"),
             item.get("create_time"),
@@ -441,13 +703,21 @@ def _normalize_comments(raw) -> list:
             "content": text,
             "create_time": ts,
             "digg_count": digg_count,
+            "reply_count": reply_count,
         }
+        if comment_id:
+            comment["comment_id"] = comment_id
 
         images = item.get("image_list") or item.get("pic_list") or item.get("images") or []
         if not images and isinstance(common.get("content"), dict):
             img_data = common["content"].get("image_data_list") or {}
             if isinstance(img_data, dict) and img_data:
                 images = list(img_data.values())
+            elif isinstance(img_data, list):
+                images = img_data
+            nested = common["content"].get("image_data_list")
+            if isinstance(nested, dict) and isinstance(nested.get("image_data"), list):
+                images = nested["image_data"]
         if isinstance(images, dict):
             images = list(images.values())
         if isinstance(images, str):
@@ -458,59 +728,39 @@ def _normalize_comments(raw) -> list:
                 if isinstance(img, str) and img:
                     img_urls.append(_fix_img_url(img))
                 elif isinstance(img, dict):
-                    url = img.get("url") or img.get("origin_url") or img.get("thumb_url") or img.get("web_url") or ""
+                    url = (
+                        img.get("url")
+                        or img.get("origin_url")
+                        or img.get("thumb_url")
+                        or img.get("web_url")
+                        or img.get("expand_web_url")
+                        or img.get("web_uri")
+                        or ""
+                    )
                     if url:
                         img_urls.append(_fix_img_url(url))
             if img_urls:
                 comment["images"] = img_urls
 
-        replies = item.get("reply_list") or item.get("replies") or item.get("sub_comments") or []
+        replies = (
+            item.get("reply_list")
+            or item.get("replies")
+            or item.get("sub_comments")
+            or comment_obj.get("reply_list")
+            or []
+        )
         if not replies and isinstance(common.get("reply_list"), (list, dict)):
             replies = common["reply_list"]
         if isinstance(replies, dict):
             replies = list(replies.values())
         if replies and isinstance(replies, list):
-            comment["reply_list"] = []
-            for rc in replies[:5]:
-                if not isinstance(rc, dict):
-                    continue
-                rc_cmt = rc.get("comment") or rc.get("comment_info") or rc
-                rc_common = rc_cmt.get("common", {}) if isinstance(rc_cmt, dict) else {}
-                rc_user = ""
-                rc_avatar = ""
-                def _ru(d):
-                    nonlocal rc_user, rc_avatar
-                    if not isinstance(d, dict): return
-                    if not rc_user:
-                        rc_user = d.get("user_name") or d.get("name") or d.get("nick_name") or ""
-                    if not rc_avatar:
-                        rc_avatar = d.get("user_avatar") or d.get("avatar_url") or d.get("avatar") or ""
-                _ru(rc.get("user"))
-                _ru(rc_common.get("user_info"))
-                _ru(rc_common.get("user_info", {}).get("base_info"))
-                if not rc_user:
-                    rc_user = rc.get("user_name") or rc.get("nick_name") or "匿名"
-                rc_text = ""
-                rc_content = rc_common.get("content") or {}
-                if isinstance(rc_content, dict):
-                    rc_text = rc_content.get("text") or ""
-                if not rc_text:
-                    rc_text = rc.get("text") or rc.get("content") or ""
-                rc_ts = 0
-                for rts in [rc_common.get("create_timestamp"), rc.get("create_timestamp"), rc.get("create_time"), rc.get("created_ts")]:
-                    if isinstance(rts, (int, float)) and rts > 0:
-                        rc_ts = rts
-                        break
-                if isinstance(rc_ts, (int, float)) and rc_ts > 1_000_000_000_000:
-                    rc_ts = rc_ts // 1000
-                rc_digg = rc_common.get("digg_count") or rc.get("digg_count") or rc.get("like_count") or 0
-                comment["reply_list"].append({
-                    "user_name": rc_user,
-                    "avatar_url": _fix_img_url(rc_avatar),
-                    "content": rc_text,
-                    "create_time": rc_ts,
-                    "digg_count": rc_digg,
-                })
+            flat_replies = []
+            for rc in replies[:_REPLY_ENRICH_PER_COMMENT]:
+                flat = _normalize_reply_item(rc)
+                if flat:
+                    flat_replies.append(flat)
+            if flat_replies:
+                comment["reply_list"] = flat_replies
 
         result.append(comment)
     return result
