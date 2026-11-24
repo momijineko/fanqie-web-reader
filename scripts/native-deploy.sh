@@ -9,6 +9,24 @@
 #    the same SHA.
 # 3. Refuse to continue unless HEAD == EXPECTED_SHA after reset.
 set -euo pipefail
+
+# One checkout, two entry points (Actions SSH and the VPS timer). Hold this
+# lock for the whole run so they cannot reset, pip-install, or restart together.
+# deploy.yml takes the same lock around its pre-sync and sets
+# FANQIE_DEPLOY_LOCK_HELD=1 so this script does not deadlock on re-entry.
+if [ -z "${FANQIE_DEPLOY_LOCK_HELD:-}" ]; then
+  exec flock -w 1200 "${HOME}/.fanqie-native-deploy.lock" \
+    env FANQIE_DEPLOY_LOCK_HELD=1 "$0" "$@"
+fi
+
+# Actions always passes EXPECTED_SHA and should restart even if the tree is
+# current. The timer leaves it unset and resolves main itself; that path
+# no-ops when the commit and APP_VERSION are already running.
+PINNED_SHA=0
+if [ -n "${EXPECTED_SHA:-}" ]; then
+  PINNED_SHA=1
+fi
+
 APP_DIR="${HOME}/fanqie-web-reader"
 cd "$APP_DIR"
 
@@ -98,6 +116,7 @@ fetch_semver_tags origin || fetch_semver_tags "https://ghproxy.net/https://githu
 # Deepen for git describe when needed (best-effort)
 timeout 60 git fetch --deepen=200 origin main || true
 
+PREV_HEAD=$(git rev-parse HEAD 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)
 git reset --hard "$EXPECTED_SHA"
 GOT=$(git rev-parse HEAD | tr '[:upper:]' '[:lower:]')
 if [ "$GOT" != "$EXPECTED_SHA" ]; then
@@ -131,6 +150,18 @@ case "$VER" in
     exit 1
     ;;
 esac
+# Timer: skip pip + restart when this commit and version are already deployed.
+# A tag that moves on the same SHA changes VER, so we still rewrite and restart.
+# A pinned Actions deploy (PINNED_SHA=1) always falls through and restarts.
+PREV_VERSION=""
+if [ -f .env ]; then
+  PREV_VERSION=$(grep -m 1 '^APP_VERSION=' .env 2>/dev/null | cut -d= -f2- || true)
+fi
+if [ "$PINNED_SHA" -eq 0 ] && [ "$PREV_HEAD" = "$EXPECTED_SHA" ] && [ "$PREV_VERSION" = "$VER" ]; then
+  echo "Already at ${EXPECTED_SHA} (${VER}); skipping install and restart"
+  exit 0
+fi
+
 # Rewrite APP_VERSION without sed; write tempfile then os.replace (atomic).
 python3 - "$VER" <<'PY'
 import os
@@ -197,7 +228,17 @@ if [ "$FQAPI_READY" != "1" ]; then
   exit 1
 fi
 
-WEB_CODE=$(curl -s --noproxy '*' -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8199/api/health || echo 000)
+# systemctl restart returns when the process is spawned, not when :8199 accepts.
+# /readyz can already be up (old fqapi, or a fast pool), so retry the bind race.
+WEB_CODE=000
+for i in $(seq 1 20); do
+  WEB_CODE=$(curl -s --noproxy '*' -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 5 \
+    http://127.0.0.1:8199/api/health || true)
+  if [ "$WEB_CODE" = "200" ]; then
+    break
+  fi
+  sleep 1
+done
 echo "Web reader HTTP $WEB_CODE"
 if [ "$WEB_CODE" != "200" ]; then
   echo "health check failed (fqapi=$(systemctl --user is-active fanqie-fqapi.service) web=$(systemctl --user is-active fanqie-web.service))"

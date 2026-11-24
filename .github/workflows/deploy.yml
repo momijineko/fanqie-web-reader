@@ -6,6 +6,11 @@ on:
       - main
   workflow_dispatch:
 
+# Queue production deploys; do not cancel one that is already restarting units.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -45,6 +50,11 @@ jobs:
             test -n "$EXPECTED_SHA"
             test "${#EXPECTED_SHA}" -eq 40
 
+            export APP_DIR EXPECTED_SHA
+            # Same lock file as scripts/native-deploy.sh. Hold it across the
+            # reset and the script so a timer tick cannot interleave.
+            flock -w 1200 "$HOME/.fanqie-native-deploy.lock" bash -s <<'LOCKED'
+            set -euo pipefail
             export GIT_HTTP_LOW_SPEED_LIMIT=1000
             export GIT_HTTP_LOW_SPEED_TIME=45
             cd "$APP_DIR"
@@ -67,7 +77,9 @@ jobs:
             git remote set-url origin https://github.com/momijineko/fanqie-web-reader.git
             install -m 755 scripts/native-deploy.sh "$HOME/bin/native-deploy.sh"
 
-            EXPECTED_SHA="$EXPECTED_SHA" "$HOME/bin/native-deploy.sh"
+            # Caller holds the lock; the script must not flock again.
+            FANQIE_DEPLOY_LOCK_HELD=1 EXPECTED_SHA="$EXPECTED_SHA" "$HOME/bin/native-deploy.sh"
+            LOCKED
 
             free -h
             echo "Deployment completed successfully!"

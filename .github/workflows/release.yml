@@ -96,7 +96,7 @@ jobs:
           CHANGED=$(python -c 'import json; print(json.load(open("/tmp/release-meta/stats.json"))["changed_files"])')
 
           RESULT=$(python scripts/resolve_bump.py --json \
-            --title "$TITLE" \
+            --title="$TITLE" \
             --labels "$LABELS" \
             --commits "$COMMITS" \
             --changed-files "$CHANGED" \

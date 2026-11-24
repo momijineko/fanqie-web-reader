@@ -166,6 +166,25 @@ def bump_semver(tag: str, level: str) -> str:
     raise ValueError(f"unknown bump level: {level!r}")
 
 
+def _bind_dashed_title(argv: list[str]) -> list[str]:
+    """Attach `--title VALUE` as `--title=VALUE`.
+
+    argparse treats a separate token that starts with `-` as a new option
+    (`argument --title: expected one argument`), which drops the release.
+    """
+    out: list[str] = []
+    i = 0
+    while i < len(argv):
+        tok = argv[i]
+        if tok == "--title" and i + 1 < len(argv):
+            out.append(f"--title={argv[i + 1]}")
+            i += 2
+            continue
+        out.append(tok)
+        i += 1
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--title", default="")
@@ -180,7 +199,9 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Print {bump, next_tag?} as JSON",
     )
-    args = parser.parse_args(argv)
+    if argv is None:
+        argv = sys.argv[1:]
+    args = parser.parse_args(_bind_dashed_title(argv))
 
     labels = json.loads(args.labels)
     commits = json.loads(args.commits)

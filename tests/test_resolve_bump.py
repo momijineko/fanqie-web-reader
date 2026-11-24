@@ -1,4 +1,13 @@
-from scripts.resolve_bump import bump_from_commits, bump_from_labels, bump_from_size, bump_semver, resolve_bump
+import json
+
+from scripts.resolve_bump import (
+    bump_from_commits,
+    bump_from_labels,
+    bump_from_size,
+    bump_semver,
+    main,
+    resolve_bump,
+)
 
 
 def test_labels_override_commits():
@@ -57,6 +66,32 @@ def test_default_small_patch():
         )
         == "patch"
     )
+
+
+def test_cli_title_leading_dash(capsys):
+    rc = main(
+        [
+            "--json",
+            "--title",
+            "- Update deploy",
+            "--labels",
+            "[]",
+            "--commits",
+            '["Update deploy.yml"]',
+            "--changed-files",
+            "2",
+            "--additions",
+            "20",
+            "--deletions",
+            "5",
+            "--current-tag",
+            "v0.2.2",
+        ]
+    )
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["bump"] == "patch"
+    assert payload["next_tag"] == "v0.2.3"
 
 
 def test_bump_semver():
