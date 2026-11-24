@@ -410,26 +410,23 @@ function _upsertProgressRetry(payload) {
   q.push(payload);
   _saveProgressRetryQueue(q);
 }
-/** Drop queued payloads that are older/equal to a successful upload; keep strictly newer ones. */
+/** Drop queued payloads with seq <= successful upload; recency is seq, not chapter index. */
 function _dropProgressRetrySupersededBy(uploaded) {
   const q = _loadProgressRetryQueue().filter(p => {
     if (p.book_id !== uploaded.book_id) return true;
-    if ((p.index || 0) > (uploaded.index || 0)) return true;
-    if ((p.index || 0) === (uploaded.index || 0) && (p.seq || 0) > (uploaded.seq || 0)) return true;
-    return false;
+    return (p.seq || 0) > (uploaded.seq || 0);
   });
   _saveProgressRetryQueue(q);
 }
 
-/** Skip retries that would rewind local progress or belong to another user. */
+/** Only retry if payload still matches current local intent (and same user). */
 function _shouldRetryProgressPayload(payload) {
   const uid = _progressUserId();
   if (payload.user_id && uid && payload.user_id !== uid) return false;
   const local = getBookProgress(payload.book_id);
   if (!local) return true;
-  if (local.chapterIdx > payload.index) return false;
-  if (local.chapterIdx === payload.index && String(local.chapterId) !== String(payload.item_id)) return false;
-  return true;
+  // Stale later-chapter / wrong-chapter retries must not POST after the user moved elsewhere
+  return String(local.chapterId) === String(payload.item_id) && local.chapterIdx === payload.index;
 }
 
 async function flushCloudProgress() {

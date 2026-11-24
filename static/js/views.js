@@ -782,7 +782,7 @@ async function _tryAutoLogin() {
   const wasLoggedIn = !!_profileUser;
   _profileUser = null;
   clearCachedUser();
-  if (typeof clearProgressRetryQueue === 'function') clearProgressRetryQueue();
+  // Keep progressRetryQueue across transient /api/user/info failures — only doLogout clears it
   _autoLoginPending = false;
   if (wasLoggedIn) router();
 }
