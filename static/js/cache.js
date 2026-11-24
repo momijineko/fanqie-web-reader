@@ -161,23 +161,20 @@ async function fetchParagraphCommentReplies(commentId, chapterId, bookId) {
   const key = `pcr_${commentId}`;
   if (inflight[key]) return inflight[key];
   const p = (async () => {
-    try {
-      const r = await fetchWithTimeout(`${API}/api/paragraph_comment_replies`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          comment_id: String(commentId),
-          chapter_id: chapterId,
-          book_id: bookId || '',
-          count: 20,
-        }),
-      });
-      const data = await r.json();
-      if (data.code === 200 && data.data) {
-        return Array.isArray(data.data) ? data.data : [];
-      }
-      return [];
-    } catch(e) { return []; }
+    const r = await fetchWithTimeout(`${API}/api/paragraph_comment_replies`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        comment_id: String(commentId),
+        chapter_id: chapterId,
+        book_id: bookId || '',
+        count: 20,
+      }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    if (data.code !== 200) throw new Error(data.msg || 'reply fetch failed');
+    return Array.isArray(data.data) ? data.data : [];
   })();
   inflight[key] = p;
   p.finally(() => delete inflight[key]);

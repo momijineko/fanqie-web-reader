@@ -1266,6 +1266,10 @@ async function toggleParaCommentReplies(btn) {
   try {
     const replies = await fetchParagraphCommentReplies(commentId, chapterId, bookId);
     if (!list) return;
+    // reply_count>0 却空列表：多半是风控/超时，不当成「已加载」以免再也拉不到。
+    if (!replies.length && replyCount > 0) {
+      throw new Error('empty replies while reply_count>0');
+    }
     if (!replies.length) {
       list.innerHTML = '<div class="comment-reply-empty">暂无回复</div>';
     } else {
@@ -1279,6 +1283,9 @@ async function toggleParaCommentReplies(btn) {
     }
     btn.textContent = '收起回复';
   } catch (e) {
+    wrap.dataset.loaded = '0';
+    wrap.dataset.expanded = '0';
+    if (list) list.hidden = true;
     btn.textContent = replyCount > 0 ? `展开 ${replyCount} 条回复` : '展开回复';
     showToast('回复加载失败');
   } finally {

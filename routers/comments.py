@@ -17,9 +17,10 @@ from shared import (
     require_resource_id,
 )
 
-# 楼中楼按需拉取（点击展开），单次条数上限。
+# 楼中楼按需拉取（点击展开）。前端 fetchWithTimeout=15s，
+# fqapi + unidbg 串行兜底合计须明显低于该值。
 _REPLY_FETCH_COUNT = 20
-_REPLY_FETCH_TIMEOUT_S = 12.0
+_REPLY_FETCH_TIMEOUT_S = 6.0
 
 router = APIRouter()
 
