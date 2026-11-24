@@ -6,7 +6,15 @@ from fastapi import APIRouter, Query
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from shared import PARA_COMMENT_MOCK, UNIDBG_API, _fanqie_client, client, community_get, logger
+from shared import (
+    PARA_COMMENT_MOCK,
+    UNIDBG_API,
+    _fanqie_client,
+    client,
+    community_get,
+    fqapi_get,
+    logger,
+)
 
 router = APIRouter()
 
@@ -79,24 +87,34 @@ def _normalize_book_comment(c: dict) -> dict:
 
 @router.post("/api/paragraph_comment_counts")
 async def paragraph_comment_counts(body: ParaCountPayload):
-    """Get paragraph comment counts. Mock mode for local dev, unidbg proxy for production."""
+    """Get paragraph comment counts. Prefer fqapi idea_list; optional unidbg; mock for local UI."""
     if PARA_COMMENT_MOCK:
         return {"code": 200, "data": _mock_para_counts(body.chapter_id), "msg": "success (mock)"}
 
-    try:
-        req_body = {"chapterId": body.chapter_id, "commentSource": 2, "serverChannel": 17, "groupType": 15}
-        if body.book_id:
-            req_body["bookId"] = body.book_id
-        r = await _fanqie_client.post(
-            f"{UNIDBG_API}/api/fqcomment/idea",
-            json=req_body,
-            timeout=20.0,
-        )
-        data = r.json()
-        counts = _extract_para_counts(data)
-        return {"code": 200, "data": counts, "msg": "success"}
-    except Exception as e:
-        logger.warning("paragraph_comment_counts 失败 chapter_id=%s: %s: %s", body.chapter_id, type(e).__name__, e)
+    # fqapi: GET /api/v1/chapters/{item_id}/reviews → idea/list
+    raw = await fqapi_get(f"/api/v1/chapters/{body.chapter_id}/reviews")
+    if raw is not None:
+        counts = _extract_para_counts(raw)
+        if counts:
+            return {"code": 200, "data": counts, "msg": "success"}
+
+    if UNIDBG_API:
+        try:
+            req_body = {"chapterId": body.chapter_id, "commentSource": 2, "serverChannel": 17, "groupType": 15}
+            if body.book_id:
+                req_body["bookId"] = body.book_id
+            r = await _fanqie_client.post(
+                f"{UNIDBG_API}/api/fqcomment/idea",
+                json=req_body,
+                timeout=20.0,
+            )
+            counts = _extract_para_counts(r.json())
+            return {"code": 200, "data": counts, "msg": "success"}
+        except Exception as e:
+            logger.warning(
+                "paragraph_comment_counts unidbg 失败 chapter_id=%s: %s: %s",
+                body.chapter_id, type(e).__name__, e,
+            )
     return {"code": 200, "data": {}, "msg": "no data"}
 
 
@@ -185,30 +203,59 @@ def _extract_para_counts(raw) -> dict:
 
 @router.post("/api/paragraph_comments")
 async def paragraph_comments(body: ParaCommentsPayload):
-    """Get paragraph comments. Mock mode for local dev, unidbg proxy for production."""
+    """Get paragraph comments.
+
+    fqapi 的 paragraphs/{n}/reviews 路由目前映射到 idea_list（只有计数），
+    book_reviews 对段评枚举组合会 103001，因此段评正文优先走可选 unidbg；
+    两者都不可用时返回空列表（徽章计数仍可由 idea_list 提供）。
+    """
     if PARA_COMMENT_MOCK:
         return {"code": 200, "data": _mock_para_comments(body.chapter_id, body.paragraph_idx), "msg": "success (mock)"}
 
-    try:
-        r = await _fanqie_client.post(
-            f"{UNIDBG_API}/api/fqcomment/list",
-            json={
-                "chapterId": body.chapter_id,
-                "bookId": body.book_id,
-                "paraIndex": body.paragraph_idx,
-                "commentSource": 2,
-                "commentType": 1,
-                "serverChannel": 18,
-                "groupType": 15,
+    if UNIDBG_API:
+        try:
+            r = await _fanqie_client.post(
+                f"{UNIDBG_API}/api/fqcomment/list",
+                json={
+                    "chapterId": body.chapter_id,
+                    "bookId": body.book_id,
+                    "paraIndex": body.paragraph_idx,
+                    "commentSource": 2,
+                    "commentType": 1,
+                    "serverChannel": 18,
+                    "groupType": 15,
+                    "count": body.count,
+                },
+                timeout=20.0,
+            )
+            comments = _normalize_comments(r.json())
+            return {"code": 200, "data": comments, "msg": "success"}
+        except Exception as e:
+            logger.warning(
+                "paragraph_comments unidbg 失败 chapter_id=%s idx=%d: %s",
+                body.chapter_id, body.paragraph_idx, e, exc_info=True,
+            )
+
+    # 尽力从 fqapi idea_list 的 infos 里抽（通常无正文，仅作兜底）
+    if body.book_id:
+        raw = await fqapi_get(
+            f"/api/v1/books/{body.book_id}/reviews",
+            params={
+                "group_id": body.chapter_id,
+                "group_type": 15,
+                "comment_source": 2,
+                "comment_type": 1,
+                "server_channel": 18,
+                "para_index": body.paragraph_idx,
                 "count": body.count,
+                "item_version": "1",
             },
-            timeout=20.0,
         )
-        data = r.json()
-        comments = _normalize_comments(data)
-        return {"code": 200, "data": comments, "msg": "success"}
-    except Exception as e:
-        logger.warning("paragraph_comments 失败 chapter_id=%s idx=%d: %s", body.chapter_id, body.paragraph_idx, e, exc_info=True)
+        if raw is not None and raw.get("code") in (0, 200, None):
+            comments = _normalize_comments(raw)
+            if comments:
+                return {"code": 200, "data": comments, "msg": "success"}
+
     return {"code": 200, "data": [], "msg": "no paragraph comments"}
 
 

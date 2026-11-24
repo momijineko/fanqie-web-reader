@@ -7,7 +7,7 @@ from typing import Any
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse, JSONResponse
 
-from shared import UNIDBG_API, _fanqie_client, client, community_get, logger, resolve_version
+from shared import client, community_get, fqapi_get, logger, resolve_version, unidbg_get
 
 router = APIRouter()
 
@@ -63,25 +63,11 @@ async def index():
     return FileResponse("static/index.html")
 
 
-async def _unidbg_get(path: str, params: dict | None = None) -> dict | None:
-    """请求 unidbg 服务；成功（code==0）时返回 data 载荷，任何失败返回 None 以便回退下一数据源。"""
-    try:
-        r = await _fanqie_client.get(f"{UNIDBG_API}{path}", params=params)
-        data = r.json()
-        if data.get("code") == 0:
-            return data.get("data") or {}
-        logger.debug("unidbg %s 返回失败: code=%s msg=%s", path, data.get("code"), data.get("message"))
-    except Exception as e:
-        logger.info("unidbg %s 不可用: %s: %s", path, type(e).__name__, e)
-    return None
-
-
 def _html_paragraphs(content_html: str) -> list[str]:
     """按 <p> 块提取段落文本，剥离除 <img> 外的全部内嵌标签。
 
-    兼容两种上游格式：社区 API 的 <p>纯文本</p>，以及 unidbg 的
-    <p><blk>文本</blk></p>（文本还包在 <blk> 内嵌标签里）。
-    保留 <img> 是为了插图类章节——reader.js 会识别纯图片段落并渲染。
+    兼容社区 API 的 <p>纯文本</p>、unidbg 的 <p><blk>…</blk></p>，以及 fqapi
+    解密后的 XHTML（可能带 <h1> 标题）。保留 <img> 供插图章节渲染。
     """
     content_html = content_html or ""
     paras = []
@@ -91,9 +77,17 @@ def _html_paragraphs(content_html: str) -> list[str]:
             paras.append(text)
     if paras:
         return paras
-    # 无 <p> 结构时整体剥标签（保留 <img>）、按行分段
     text = re.sub(r'<(?!img\b)[^>]+>', '\n', content_html)
     return [l.strip() for l in text.split('\n') if l.strip()]
+
+
+def _uget(obj: dict, *keys):
+    """兼容 camelCase / snake_case，依次取首个非空值。"""
+    for k in keys:
+        v = obj.get(k)
+        if v is not None:
+            return v
+    return None
 
 
 # ====== 搜索 ======
@@ -116,30 +110,6 @@ def _map_unidbg_book(item: dict) -> dict:
         "Tags": tags,
         "ReadCount": item.get("readCount", 0),
     }
-
-
-@router.get("/api/search")
-async def search(key: str = Query(...), tab_type: int = 3, offset: int = 0):
-    d = await _unidbg_get(
-        "/api/fqsearch/books",
-        params={"query": key, "tabType": tab_type, "offset": offset, "count": 20},
-    )
-    if d is not None:
-        books = [_map_unidbg_book(b) for b in d.get("books") or [] if isinstance(b, dict)]
-        return {"code": 200, "data": books, "has_more": bool(d.get("hasMore")), "msg": "success"}
-
-    data = await community_get("/api/search", {"key": key, "tab_type": tab_type, "offset": offset})
-    if data is None:
-        logger.warning("search 所有数据源均失败")
-        return JSONResponse(status_code=502, content={"code": 502, "msg": "all sources unavailable", "data": []})
-    raw = data.get("data", {})
-    if isinstance(raw, dict):
-        tabs = raw.get("search_tabs", [])
-        has_more = any(t.get("has_more") for t in tabs if isinstance(t, dict))
-        books = _extract_books_from_tabs(tabs)
-        if books:
-            return {"code": 200, "data": books, "has_more": has_more, "msg": "success"}
-    return {"code": 200, "data": [], "msg": "no results"}
 
 
 def _extract_books_from_tabs(tabs: list) -> list:
@@ -178,6 +148,46 @@ def _extract_books_from_tabs(tabs: list) -> list:
                     "ReadCount": bd.get("read_count", 0),
                 })
     return books
+
+
+@router.get("/api/search")
+async def search(key: str = Query(...), tab_type: int = 3, offset: int = 0):
+    # 1) fqapi-core：上游原样，search_tabs 在顶层
+    raw = await fqapi_get(
+        "/api/v1/search",
+        params={"query": key, "tab_type": tab_type, "offset": offset, "count": 20},
+    )
+    if raw is not None:
+        tabs = raw.get("search_tabs") or (raw.get("data") or {}).get("search_tabs") or []
+        # 优先取请求的 tab_type；综合 tab 常为空，书籍在 tab_type=3
+        preferred = [t for t in tabs if isinstance(t, dict) and t.get("tab_type") == tab_type]
+        use_tabs = preferred or tabs
+        books = _extract_books_from_tabs(use_tabs)
+        has_more = any(bool(t.get("has_more")) for t in use_tabs if isinstance(t, dict))
+        return {"code": 200, "data": books, "has_more": has_more, "msg": "success"}
+
+    # 2) unidbg（可选）
+    d = await unidbg_get(
+        "/api/fqsearch/books",
+        params={"query": key, "tabType": tab_type, "offset": offset, "count": 20},
+    )
+    if d is not None:
+        books = [_map_unidbg_book(b) for b in d.get("books") or [] if isinstance(b, dict)]
+        return {"code": 200, "data": books, "has_more": bool(d.get("hasMore")), "msg": "success"}
+
+    # 3) 社区 API
+    data = await community_get("/api/search", {"key": key, "tab_type": tab_type, "offset": offset})
+    if data is None:
+        logger.warning("search 所有数据源均失败")
+        return JSONResponse(status_code=502, content={"code": 502, "msg": "all sources unavailable", "data": []})
+    raw = data.get("data", {})
+    if isinstance(raw, dict):
+        tabs = raw.get("search_tabs", [])
+        has_more = any(t.get("has_more") for t in tabs if isinstance(t, dict))
+        books = _extract_books_from_tabs(tabs)
+        if books:
+            return {"code": 200, "data": books, "has_more": has_more, "msg": "success"}
+    return {"code": 200, "data": [], "msg": "no results"}
 
 
 @router.get("/api/author_books")
@@ -239,9 +249,54 @@ async def author_books(author_id: str = Query(...)):
 
 # ====== 章节目录 ======
 
+def _map_item_data_list(items: list) -> list:
+    result = []
+    for ch in items:
+        if not isinstance(ch, dict):
+            continue
+        item_id = _uget(ch, "item_id", "itemId")
+        if not item_id:
+            continue
+        order = _uget(ch, "chapter_index", "chapterIndex")
+        result.append({
+            "ChapterID": item_id,
+            "Name": _uget(ch, "title") or f"第{len(result) + 1}章",
+            "Order": order if order is not None else "",
+            "UpdateTime": _uget(ch, "first_pass_time", "firstPassTime") or 0,
+            "volume_name": _uget(ch, "volume_name", "volumeName") or "",
+        })
+    return result
+
+
+def _map_unidbg_directory(d: dict) -> list:
+    result = _map_item_data_list(_uget(d, "itemDataList", "item_data_list") or [])
+    if result:
+        return result
+    for i, c in enumerate(_uget(d, "catalogData", "catalog_data") or []):
+        if isinstance(c, dict) and _uget(c, "itemId", "item_id"):
+            result.append({
+                "ChapterID": _uget(c, "itemId", "item_id"),
+                "Name": _uget(c, "catalogTitle", "catalog_title") or f"第{i + 1}章",
+                "Order": i,
+                "UpdateTime": 0,
+                "volume_name": "",
+            })
+    return result
+
+
 @router.get("/api/chapters")
 async def chapters(book_id: str = Query(...)):
-    d = await _unidbg_get(f"/api/fqsearch/directory/{book_id}")
+    raw = await fqapi_get(f"/api/v1/books/{book_id}/directory")
+    if raw is not None:
+        data = raw.get("data") or {}
+        result = _map_item_data_list(data.get("item_data_list") or [])
+        if not result:
+            result = _map_unidbg_directory(data)
+        if result:
+            return {"code": 200, "data": result, "msg": "success", "total": len(result)}
+        return {"code": 200, "data": [], "msg": "no chapters"}
+
+    d = await unidbg_get(f"/api/fqsearch/directory/{book_id}")
     if d is not None:
         result = _map_unidbg_directory(d)
         if result:
@@ -285,45 +340,6 @@ async def chapters(book_id: str = Query(...)):
     return {"code": 200, "data": [], "msg": "no chapters"}
 
 
-def _uget(obj: dict, *keys):
-    """unidbg 各接口的 JSON 命名风格不统一（有的 camelCase 有的 snake_case），依次取首个非空值。"""
-    for k in keys:
-        v = obj.get(k)
-        if v is not None:
-            return v
-    return None
-
-
-def _map_unidbg_directory(d: dict) -> list:
-    result = []
-    for ch in _uget(d, "itemDataList", "item_data_list") or []:
-        if not isinstance(ch, dict):
-            continue
-        item_id = _uget(ch, "itemId", "item_id")
-        if not item_id:
-            continue
-        order = _uget(ch, "chapterIndex", "chapter_index")
-        result.append({
-            "ChapterID": item_id,
-            "Name": _uget(ch, "title") or f"第{len(result) + 1}章",
-            "Order": order if order is not None else "",
-            "UpdateTime": _uget(ch, "firstPassTime", "first_pass_time") or 0,
-            "volume_name": _uget(ch, "volumeName", "volume_name") or "",
-        })
-    if result:
-        return result
-    for i, c in enumerate(_uget(d, "catalogData", "catalog_data") or []):
-        if isinstance(c, dict) and _uget(c, "itemId", "item_id"):
-            result.append({
-                "ChapterID": _uget(c, "itemId", "item_id"),
-                "Name": _uget(c, "catalogTitle", "catalog_title") or f"第{i + 1}章",
-                "Order": i,
-                "UpdateTime": 0,
-                "volume_name": "",
-            })
-    return result
-
-
 # ====== 章节正文 ======
 
 @router.get("/api/content")
@@ -333,9 +349,33 @@ async def content(chapter_id: str = Query(...), book_id: str = Query(default="")
     if cached is not None:
         return cached
 
-    # 数据源 1：unidbg 签名接口（需要 book_id）
+    # 1) fqapi-core：已解密明文（常为 XHTML）
+    params = {"book_id": book_id} if book_id else None
+    raw = await fqapi_get(f"/api/v1/chapters/{chapter_id}", params=params)
+    if raw is not None:
+        data = raw.get("data") or {}
+        content_html = data.get("content") or ""
+        paragraphs = _html_paragraphs(content_html)
+        if not paragraphs and content_html:
+            paragraphs = [l for l in content_html.split("\n") if l.strip()]
+        if paragraphs:
+            result = {
+                "code": 200,
+                "data": {
+                    "ChapterID": chapter_id,
+                    "Title": data.get("title") or "",
+                    "Paragraphs": paragraphs,
+                    "AuthorSpeak": data.get("author_speak") or "",
+                },
+                "msg": "success",
+            }
+            _cache_set(cache_key, result)
+            return result
+        logger.warning("fqapi 正文为空 chapter_id=%s，尝试下一数据源", chapter_id)
+
+    # 2) unidbg（可选，需要 book_id）
     if book_id:
-        d = await _unidbg_get(f"/api/fqnovel/chapter/{book_id}/{chapter_id}")
+        d = await unidbg_get(f"/api/fqnovel/chapter/{book_id}/{chapter_id}")
         if d is not None:
             paragraphs = _html_paragraphs(_uget(d, "rawContent", "raw_content") or "")
             if not paragraphs:
@@ -355,7 +395,7 @@ async def content(chapter_id: str = Query(...), book_id: str = Query(default="")
                 return result
             logger.warning("unidbg 正文为空 chapter_id=%s，回退社区 API", chapter_id)
 
-    # 数据源 2：社区 API（多实例轮询）
+    # 3) 社区 API
     r_data = await community_get("/api/raw_full", {"item_id": chapter_id})
     if r_data is not None:
         raw = r_data.get("data", {})
@@ -407,6 +447,36 @@ def _to_int(v) -> int:
         return 0
 
 
+def _map_fqapi_detail(d: dict, book_id: str) -> dict:
+    return {
+        "book_id": d.get("book_id", book_id),
+        "book_name": d.get("book_name", ""),
+        "title": d.get("book_name", ""),
+        "author": d.get("author", ""),
+        "writer": d.get("author", ""),
+        "author_id": d.get("author_id", ""),
+        "bind_author_ids": d.get("bind_author_ids", ""),
+        "abstract": d.get("abstract", ""),
+        "description": d.get("abstract", ""),
+        "thumb_url": d.get("thumb_url", ""),
+        "audio_thumb_uri": d.get("audio_thumb_uri", ""),
+        "category": d.get("category", ""),
+        "chapter_number": d.get("chapter_number") or "",
+        "word_number": _to_int(d.get("word_number")),
+        "score": d.get("score", ""),
+        "original_book_name": d.get("modified_reputation_book_name", ""),
+        "book_flight_alias_name": d.get("book_flight_alias_name", ""),
+        "creation_status": str(d.get("creation_status", "")),
+        "tags": d.get("tags", ""),
+        "read_count": d.get("read_count", ""),
+        "read_cnt_text": d.get("read_cnt_text", ""),
+        "first_chapter_item_id": d.get("first_chapter_item_id", ""),
+        "last_chapter_item_id": d.get("last_chapter_item_id", ""),
+        "last_chapter_title": d.get("last_chapter_title", ""),
+        "flight_flag": str(d.get("flight_flag") or ""),
+    }
+
+
 @router.get("/api/detail")
 async def detail(book_id: str = Query(...)):
     cache_key = f"detail:{book_id}"
@@ -414,7 +484,18 @@ async def detail(book_id: str = Query(...)):
     if cached is not None:
         return cached
 
-    d = await _unidbg_get(f"/api/fqnovel/book/{book_id}")
+    raw = await fqapi_get(f"/api/v1/books/{book_id}")
+    if raw is not None:
+        d = raw.get("data") or {}
+        if isinstance(d, dict) and (d.get("book_id") or d.get("book_name")):
+            book = _map_fqapi_detail(d, book_id)
+            if book["flight_flag"] == "1" and book["author_id"]:
+                await _fill_flight_original(book, book_id)
+            result = {"code": 200, "data": {**book, "data": book}, "msg": "success"}
+            _cache_set(cache_key, result)
+            return result
+
+    d = await unidbg_get(f"/api/fqnovel/book/{book_id}")
     if d is not None:
         book = {
             "book_id": d.get("bookId", book_id),
@@ -443,27 +524,8 @@ async def detail(book_id: str = Query(...)):
             "last_chapter_title": d.get("lastChapterTitle", ""),
             "flight_flag": str(d.get("flightFlag") or ""),
         }
-        # 飞行书（改名推广）：详情显示推广名/推广封面，原名与原封面从作者书单解析。
-        # unidbg 的 modifiedReputationBookName 对飞行书常为空，bindReputationBookId 指向的是空壳条目。
         if book["flight_flag"] == "1" and book["author_id"]:
-            try:
-                r = await client.get(
-                    "https://api5-normal-sinfonlinec.fqnovel.com/reading/user/basic_info/get/v",
-                    params={"user_id": book["author_id"], "aid": "1967", "version_code": "65532"},
-                    headers={"User-Agent": "com.dragon.read/6.5.3.32.3 (Android 9)"},
-                )
-                data = r.json().get("data", {})
-                raw_books = data.get("praise_info", {}).get("praise_book_list") or data.get("author_book_info") or []
-                for bd in raw_books:
-                    if not isinstance(bd, dict) or str(bd.get("book_id")) != str(book_id):
-                        continue
-                    if bd.get("book_name") and bd["book_name"] != book["book_name"]:
-                        book["original_book_name"] = bd["book_name"]
-                    if bd.get("thumb_url"):
-                        book["original_thumb_url"] = bd["thumb_url"]
-                    break
-            except Exception as e:
-                logger.info("飞行书原名解析失败 book_id=%s: %s: %s", book_id, type(e).__name__, e)
+            await _fill_flight_original(book, book_id)
         result = {"code": 200, "data": {**book, "data": book}, "msg": "success"}
         _cache_set(cache_key, result)
         return result
@@ -474,3 +536,25 @@ async def detail(book_id: str = Query(...)):
         return JSONResponse(status_code=502, content={"code": 502, "msg": "all sources unavailable", "data": {}})
     _cache_set(cache_key, data)
     return data
+
+
+async def _fill_flight_original(book: dict, book_id: str) -> None:
+    """飞行书：从作者书单补原名/原封面。"""
+    try:
+        r = await client.get(
+            "https://api5-normal-sinfonlinec.fqnovel.com/reading/user/basic_info/get/v",
+            params={"user_id": book["author_id"], "aid": "1967", "version_code": "65532"},
+            headers={"User-Agent": "com.dragon.read/6.5.3.32.3 (Android 9)"},
+        )
+        data = r.json().get("data", {})
+        raw_books = data.get("praise_info", {}).get("praise_book_list") or data.get("author_book_info") or []
+        for bd in raw_books:
+            if not isinstance(bd, dict) or str(bd.get("book_id")) != str(book_id):
+                continue
+            if bd.get("book_name") and bd["book_name"] != book["book_name"]:
+                book["original_book_name"] = bd["book_name"]
+            if bd.get("thumb_url"):
+                book["original_thumb_url"] = bd["thumb_url"]
+            break
+    except Exception as e:
+        logger.info("飞行书原名解析失败 book_id=%s: %s: %s", book_id, type(e).__name__, e)

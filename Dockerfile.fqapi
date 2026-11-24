@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+# Build fqapi-server (fanqie-lite-api) at a pinned tag — ~6MB binary vs ~351MB unidbg jar.
+
+ARG FQAPI_REF=v0.2.0
+
+FROM rust:1-slim-bookworm AS build
+ARG FQAPI_REF
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git gcc libc6-dev ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git clone --depth 1 --branch "${FQAPI_REF}" https://github.com/Maicy0609/fanqie-lite-api.git .
+RUN cargo build --release --locked --bin fqapi-server \
+ && strip target/release/fqapi-server
+
+FROM debian:bookworm-slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl ca-certificates \
+ && rm -rf /var/lib/apt/lists/* \
+ && useradd --system --uid 10001 --create-home fqapi \
+ && mkdir -p /data \
+ && chown fqapi:fqapi /data
+COPY --from=build /src/target/release/fqapi-server /usr/local/bin/fqapi-server
+USER fqapi
+WORKDIR /data
+VOLUME ["/data"]
+EXPOSE 18921
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:18921/healthz || exit 1
+ENTRYPOINT ["fqapi-server"]
+CMD ["--data-dir", "/data", "--listen", "0.0.0.0:18921"]
