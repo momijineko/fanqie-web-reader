@@ -7,7 +7,15 @@ from typing import Any
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse, JSONResponse
 
-from shared import client, community_get, fqapi_get, logger, resolve_version, unidbg_get
+from shared import (
+    client,
+    community_get,
+    fqapi_get,
+    logger,
+    require_resource_id,
+    resolve_version,
+    unidbg_get,
+)
 
 router = APIRouter()
 
@@ -286,6 +294,7 @@ def _map_unidbg_directory(d: dict) -> list:
 
 @router.get("/api/chapters")
 async def chapters(book_id: str = Query(...)):
+    book_id = require_resource_id(book_id, "book_id")
     raw = await fqapi_get(f"/api/v1/books/{book_id}/directory")
     if raw is not None:
         data = raw.get("data") or {}
@@ -344,6 +353,9 @@ async def chapters(book_id: str = Query(...)):
 
 @router.get("/api/content")
 async def content(chapter_id: str = Query(...), book_id: str = Query(default="")):
+    chapter_id = require_resource_id(chapter_id, "chapter_id")
+    if book_id:
+        book_id = require_resource_id(book_id, "book_id")
     cache_key = f"content:{chapter_id}"
     cached = _cache_get(cache_key, _CONTENT_TTL)
     if cached is not None:
@@ -479,6 +491,7 @@ def _map_fqapi_detail(d: dict, book_id: str) -> dict:
 
 @router.get("/api/detail")
 async def detail(book_id: str = Query(...)):
+    book_id = require_resource_id(book_id, "book_id")
     cache_key = f"detail:{book_id}"
     cached = _cache_get(cache_key, _DETAIL_TTL)
     if cached is not None:

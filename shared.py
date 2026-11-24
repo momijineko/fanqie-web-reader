@@ -1,9 +1,25 @@
 import json
 import logging
 import os
+import re
 from pathlib import Path
 
 import httpx
+from fastapi import HTTPException
+
+# Fanqie book/chapter (item) IDs are numeric. Reject anything else before path
+# interpolation so callers cannot smuggle `../` into privileged signer URLs.
+_RESOURCE_ID_RE = re.compile(r"^\d{1,32}$")
+
+# fqapi_get only speaks these authenticated GET shapes. Anything else (admin,
+# account, media, path-normalized escapes) is refused even with a valid token.
+_FQAPI_ALLOWED_PATH_RE = re.compile(
+    r"^/api/v1/(?:"
+    r"search|"
+    r"books/\d{1,32}(?:/directory|/reviews)?|"
+    r"chapters/\d{1,32}(?:/reviews)?"
+    r")$"
+)
 
 COOKIE_FILE = Path("user_cookie.json")
 
@@ -93,16 +109,42 @@ def _fqapi_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {FQAPI_TOKEN}"}
 
 
+def require_resource_id(value: str, name: str = "id") -> str:
+    """Validate a Fanqie resource id used in upstream URL path segments."""
+    v = (value or "").strip()
+    if not _RESOURCE_ID_RE.fullmatch(v):
+        raise HTTPException(status_code=400, detail=f"invalid {name}")
+    return v
+
+
+def _fqapi_safe_url(path: str) -> httpx.URL | None:
+    """Join path onto FQAPI_API and refuse traversal / off-allowlist targets."""
+    if not path.startswith("/") or "\\" in path or ".." in path or "%" in path:
+        return None
+    base = httpx.URL(FQAPI_API)
+    url = base.join(path)
+    if (url.scheme, url.host, url.port) != (base.scheme, base.host, base.port):
+        return None
+    if not _FQAPI_ALLOWED_PATH_RE.fullmatch(url.path):
+        return None
+    return url
+
+
 async def fqapi_get(path: str, params: dict | None = None) -> dict | None:
     """请求 fqapi-core；成功（HTTP 200 且业务 code 为 0/缺省）时返回完整 JSON，否则 None。
 
     注意：fqapi 多数响应是上游原样透传——搜索的 search_tabs 在顶层，详情/正文在 data 下。
+    Bearer token 仅附在 allowlist 内的 GET 上，避免 caller 注入路径穿越成 confused deputy。
     """
     if not FQAPI_API:
         return None
+    url = _fqapi_safe_url(path)
+    if url is None:
+        logger.warning("fqapi rejected unsafe path: %r", path)
+        return None
     try:
         r = await client.get(
-            f"{FQAPI_API}{path}",
+            url,
             params=params,
             headers=_fqapi_headers(),
             timeout=20.0,
@@ -126,6 +168,9 @@ async def fqapi_get(path: str, params: dict | None = None) -> dict | None:
 async def unidbg_get(path: str, params: dict | None = None) -> dict | None:
     """请求 unidbg；成功（code==0）时返回 data 载荷，任何失败返回 None。"""
     if not UNIDBG_API:
+        return None
+    if not path.startswith("/") or "\\" in path or ".." in path or "%" in path:
+        logger.warning("unidbg rejected unsafe path: %r", path)
         return None
     try:
         r = await _fanqie_client.get(f"{UNIDBG_API}{path}", params=params, timeout=20.0)
