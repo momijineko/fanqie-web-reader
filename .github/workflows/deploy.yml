@@ -92,22 +92,34 @@ jobs:
             docker compose up -d
 
             echo "Waiting for fqapi readiness..."
+            FQAPI_READY=0
             for i in $(seq 1 40); do
-              CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 3 http://127.0.0.1:18921/readyz 2>/dev/null || echo 000)
-              # fqapi is loopback-only inside container; probe via docker exec
-              if docker exec fanqie-fqapi curl -fsS http://127.0.0.1:18921/readyz >/dev/null 2>&1; then
+              if curl -fsS --connect-timeout 3 http://127.0.0.1:18921/readyz >/dev/null 2>&1 \
+                || docker exec fanqie-fqapi curl -fsS http://127.0.0.1:18921/readyz >/dev/null 2>&1; then
                 echo "fqapi READY"
+                FQAPI_READY=1
                 break
               fi
               echo "fqapi check $i ..."
               sleep 3
             done
+            if [ "$FQAPI_READY" != "1" ]; then
+              echo "!!! fqapi never became ready !!!"
+              docker compose logs --tail=80 fqapi || true
+              exit 1
+            fi
 
             sleep 5
             echo "=== Final ==="
             docker compose ps
-            curl -s -o /dev/null -w "Web reader HTTP %{http_code}\n" http://127.0.0.1:8199/api/health || echo "Web reader not ready"
-            docker exec fanqie-fqapi curl -fsS http://127.0.0.1:18921/healthz || echo "fqapi healthz failed"
+            WEB_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8199/api/health || echo 000)
+            echo "Web reader HTTP $WEB_CODE"
+            if [ "$WEB_CODE" != "200" ]; then
+              echo "!!! web reader health check failed !!!"
+              docker compose logs --tail=80 fanqie-web-reader || true
+              exit 1
+            fi
+            curl -fsS http://127.0.0.1:18921/healthz || docker exec fanqie-fqapi curl -fsS http://127.0.0.1:18921/healthz
             free -h
             df -h /
             docker image prune -f

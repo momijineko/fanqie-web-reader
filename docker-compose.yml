@@ -8,6 +8,10 @@ services:
     image: fanqie-fqapi:local
     container_name: fanqie-fqapi
     mem_limit: 256m
+    ports:
+      # Loopback only: host-side start.bat / local python can hit FQAPI_API=127.0.0.1:18921
+      # after `docker compose up -d fqapi` without exposing the signer on the LAN.
+      - "127.0.0.1:18921:18921"
     environment:
       FQ_API_TOKENS: ${FQAPI_TOKEN:?Set FQAPI_TOKEN in .env}
       FQ_MAX_CONCURRENCY: "40"
