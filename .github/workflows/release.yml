@@ -1,0 +1,164 @@
+name: Release
+
+# 合并进 main 后按 PR 功能点大小自动打 SemVer tag（vMAJOR.MINOR.PATCH）。
+# 规则见 scripts/resolve_bump.py。
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: bump-and-tag
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout merge commit on main
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # Tag the real merge result on main — NOT refs/pull/*/merge
+          # (squash/rebase SHAs differ from the synthetic merge ref).
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Collect PR signals
+        id: meta
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/release-meta
+          gh pr view "$PR" --json title,labels,additions,deletions,changedFiles \
+            > /tmp/release-meta/pr.json
+          # Full commit messages (needed for BREAKING CHANGE footers)
+          gh api --paginate "repos/${{ github.repository }}/pulls/${PR}/commits" \
+            > /tmp/release-meta/commits-raw.json
+
+          python <<'PY'
+          import json
+          from pathlib import Path
+          pr = json.loads(Path("/tmp/release-meta/pr.json").read_text())
+          Path("/tmp/release-meta/title.txt").write_text(pr.get("title") or "", encoding="utf-8")
+          Path("/tmp/release-meta/labels.json").write_text(
+              json.dumps([x["name"] for x in pr.get("labels") or []], ensure_ascii=False),
+              encoding="utf-8",
+          )
+          raw = json.loads(Path("/tmp/release-meta/commits-raw.json").read_text())
+          if not isinstance(raw, list):
+              raw = []
+          msgs = [(c.get("commit") or {}).get("message") or "" for c in raw]
+          Path("/tmp/release-meta/commits.json").write_text(
+              json.dumps(msgs, ensure_ascii=False), encoding="utf-8"
+          )
+          Path("/tmp/release-meta/stats.json").write_text(
+              json.dumps(
+                  {
+                      "additions": int(pr.get("additions") or 0),
+                      "deletions": int(pr.get("deletions") or 0),
+                      "changed_files": int(pr.get("changedFiles") or 0),
+                  }
+              ),
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Resolve bump
+        id: bump
+        run: |
+          set -euo pipefail
+          CURRENT=$(git tag -l 'v*.*.*' --sort=-v:refname | head -1)
+          if [ -z "$CURRENT" ]; then
+            CURRENT="v0.0.0"
+          fi
+
+          TITLE=$(cat /tmp/release-meta/title.txt)
+          LABELS=$(cat /tmp/release-meta/labels.json)
+          COMMITS=$(cat /tmp/release-meta/commits.json)
+          ADDITIONS=$(python -c 'import json; print(json.load(open("/tmp/release-meta/stats.json"))["additions"])')
+          DELETIONS=$(python -c 'import json; print(json.load(open("/tmp/release-meta/stats.json"))["deletions"])')
+          CHANGED=$(python -c 'import json; print(json.load(open("/tmp/release-meta/stats.json"))["changed_files"])')
+
+          # Use --flag=value so titles starting with "-" are not parsed as options.
+          RESULT=$(python scripts/resolve_bump.py --json \
+            --title="$TITLE" \
+            --labels="$LABELS" \
+            --commits="$COMMITS" \
+            --changed-files="$CHANGED" \
+            --additions="$ADDITIONS" \
+            --deletions="$DELETIONS" \
+            --current-tag="$CURRENT")
+          echo "result=$RESULT"
+
+          BUMP=$(echo "$RESULT" | python -c 'import json,sys; print(json.load(sys.stdin)["bump"])')
+          NEXT=$(echo "$RESULT" | python -c 'import json,sys; print(json.load(sys.stdin).get("next_tag",""))')
+
+          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+
+          if [ "$BUMP" = "none" ]; then
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            echo "tag=" >> "$GITHUB_OUTPUT"
+            echo "Skip release (bump:none)"
+            exit 0
+          fi
+
+          if git rev-parse -q --verify "refs/tags/$NEXT" >/dev/null; then
+            echo "skipped=true" >> "$GITHUB_OUTPUT"
+            echo "tag=$NEXT" >> "$GITHUB_OUTPUT"
+            echo "Tag $NEXT already exists"
+            exit 0
+          fi
+
+          echo "skipped=false" >> "$GITHUB_OUTPUT"
+          echo "tag=$NEXT" >> "$GITHUB_OUTPUT"
+
+      - name: Create annotated tag
+        if: steps.bump.outputs.skipped == 'false'
+        env:
+          TAG: ${{ steps.bump.outputs.tag }}
+          BUMP: ${{ steps.bump.outputs.bump }}
+          PR: ${{ github.event.pull_request.number }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+          TITLE=$(cat /tmp/release-meta/title.txt)
+          test -n "$MERGE_SHA"
+          test "$(git rev-parse HEAD)" = "$MERGE_SHA"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" "$MERGE_SHA" -m "release $TAG ($BUMP)
+
+          PR #$PR: $TITLE
+          "
+          git push origin "refs/tags/$TAG"
+
+      - name: Summary
+        run: |
+          {
+            echo "## Release"
+            echo ""
+            echo "- merge_sha: \`${{ github.event.pull_request.merge_commit_sha }}\`"
+            echo "- current: \`${{ steps.bump.outputs.current }}\`"
+            echo "- bump: \`${{ steps.bump.outputs.bump }}\`"
+            echo "- tag: \`${{ steps.bump.outputs.tag || '(none)' }}\`"
+            echo "- skipped: \`${{ steps.bump.outputs.skipped }}\`"
+            echo ""
+            echo "Rules: \`scripts/resolve_bump.py\` (labels → conventional commits → 功能点大小)"
+          } >> "$GITHUB_STEP_SUMMARY"
