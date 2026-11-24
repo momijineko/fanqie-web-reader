@@ -29,26 +29,31 @@ jobs:
 
             APP_DIR="$HOME/fanqie-web-reader"
             test -d "$APP_DIR/.git"
-            test -x "$HOME/bin/native-deploy.sh"
 
-            # Keep server copy of native-deploy.sh in sync with the pinned commit
-            # by running the in-tree script after a verified github.com fetch.
+            # Bootstrap / refresh deploy script from the pinned commit using the
+            # same trust model as native-deploy.sh (SHA from Actions = trusted).
             export GIT_HTTP_LOW_SPEED_LIMIT=1000
-            export GIT_HTTP_LOW_SPEED_TIME=30
+            export GIT_HTTP_LOW_SPEED_TIME=45
             cd "$APP_DIR"
-            git remote set-url origin https://github.com/momijineko/fanqie-web-reader.git
-            git fetch --depth 1 origin "$EXPECTED_SHA"
-            git fetch --tags --force origin
-            git fetch --deepen=200 origin main || true
+
+            fetch_pin() {
+              local url="$1"
+              git remote set-url origin "$url"
+              timeout 90 git fetch --depth 1 origin "$EXPECTED_SHA"
+            }
+            if ! fetch_pin "https://github.com/momijineko/fanqie-web-reader.git"; then
+              echo "github.com fetch slow/failed, trying ghproxy for pinned SHA"
+              fetch_pin "https://ghproxy.net/https://github.com/momijineko/fanqie-web-reader.git"
+            fi
             git reset --hard "$EXPECTED_SHA"
             GOT=$(git rev-parse HEAD)
             if [ "$GOT" != "$EXPECTED_SHA" ]; then
               echo "REFUSING deploy: HEAD $GOT != expected $EXPECTED_SHA"
               exit 1
             fi
+            git remote set-url origin https://github.com/momijineko/fanqie-web-reader.git
             install -m 755 scripts/native-deploy.sh "$HOME/bin/native-deploy.sh"
 
-            # Re-run full deploy with the same pin (idempotent install/restart)
             EXPECTED_SHA="$EXPECTED_SHA" "$HOME/bin/native-deploy.sh"
 
             systemctl --user --no-pager is-active fanqie-fqapi.service fanqie-web.service
