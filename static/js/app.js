@@ -366,9 +366,137 @@ function getBookProgress(bookId) {
 }
 function saveBookProgress(bookId, progress) {
   const all = JSON.parse(localStorage.getItem('bookProgress') || '{}');
-  all[bookId] = progress;
+  const prev = all[bookId] || {};
+  all[bookId] = Object.assign({}, prev, progress, { fromCloud: false });
   localStorage.setItem('bookProgress', JSON.stringify(all));
 }
+
+// Cloud progress: debounce uploads + retry on failure / page hide
+let _pendingCloudProgress = null;
+let _cloudProgressTimer = 0;
+let _cloudProgressSeq = 0;
+const _CLOUD_PROGRESS_RETRY_KEY = 'progressRetryQueue';
+
+function _progressUserId() {
+  if (typeof _profileUser === 'undefined' || !_profileUser) return '';
+  return String(_profileUser.user_id || _profileUser.userId || _profileUser.id || '');
+}
+
+function queueCloudProgress(bookId, chapterId, chapterIdx) {
+  if (typeof _profileUser === 'undefined' || !_profileUser) return;
+  _pendingCloudProgress = {
+    book_id: String(bookId),
+    item_id: String(chapterId),
+    index: chapterIdx,
+    user_id: _progressUserId(),
+    seq: ++_cloudProgressSeq,
+  };
+  clearTimeout(_cloudProgressTimer);
+  _cloudProgressTimer = setTimeout(flushCloudProgress, 800);
+}
+
+function _loadProgressRetryQueue() {
+  try { return JSON.parse(localStorage.getItem(_CLOUD_PROGRESS_RETRY_KEY) || '[]'); } catch (e) { return []; }
+}
+function _saveProgressRetryQueue(q) {
+  localStorage.setItem(_CLOUD_PROGRESS_RETRY_KEY, JSON.stringify(q.slice(-20)));
+}
+function clearProgressRetryQueue() {
+  localStorage.removeItem(_CLOUD_PROGRESS_RETRY_KEY);
+}
+/** Keep only the latest payload per book so older failed uploads cannot overwrite newer progress. */
+function _upsertProgressRetry(payload) {
+  const q = _loadProgressRetryQueue().filter(p => p.book_id !== payload.book_id);
+  q.push(payload);
+  _saveProgressRetryQueue(q);
+}
+/** Drop queued payloads with seq <= successful upload; recency is seq, not chapter index. */
+function _dropProgressRetrySupersededBy(uploaded) {
+  const q = _loadProgressRetryQueue().filter(p => {
+    if (p.book_id !== uploaded.book_id) return true;
+    return (p.seq || 0) > (uploaded.seq || 0);
+  });
+  _saveProgressRetryQueue(q);
+}
+
+/** Only retry if payload still matches current local intent (and same user). */
+function _shouldRetryProgressPayload(payload) {
+  const uid = _progressUserId();
+  if (payload.user_id && uid && payload.user_id !== uid) return false;
+  const local = getBookProgress(payload.book_id);
+  if (!local) return true;
+  // Stale later-chapter / wrong-chapter retries must not POST after the user moved elsewhere
+  return String(local.chapterId) === String(payload.item_id) && local.chapterIdx === payload.index;
+}
+
+async function flushCloudProgress() {
+  clearTimeout(_cloudProgressTimer);
+  const payload = _pendingCloudProgress;
+  _pendingCloudProgress = null;
+  if (!payload) return;
+  if (typeof _profileUser === 'undefined' || !_profileUser) return;
+  try {
+    const r = await fetch(`${API}/api/user/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        book_id: payload.book_id,
+        item_id: payload.item_id,
+        index: payload.index,
+      }),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || data.code !== 200) throw new Error(data.msg || 'progress sync failed');
+    // Only drop retries older/equal to this upload — never wipe a newer failed retry
+    _dropProgressRetrySupersededBy(payload);
+  } catch (e) {
+    _upsertProgressRetry(payload);
+  }
+}
+
+async function retryCloudProgressQueue() {
+  if (typeof _profileUser === 'undefined' || !_profileUser) return;
+  const uid = _progressUserId();
+  const byBook = new Map();
+  for (const p of _loadProgressRetryQueue()) {
+    if (p.user_id && uid && p.user_id !== uid) continue; // other account — drop
+    if (!_shouldRetryProgressPayload(p)) continue; // would rewind local — drop
+    byBook.set(p.book_id, p); // latest per book wins
+  }
+  const q = Array.from(byBook.values());
+  if (!q.length) {
+    _saveProgressRetryQueue([]);
+    return;
+  }
+  const remaining = [];
+  for (const payload of q) {
+    try {
+      const r = await fetch(`${API}/api/user/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          book_id: payload.book_id,
+          item_id: payload.item_id,
+          index: payload.index,
+        }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || data.code !== 200) remaining.push(payload);
+    } catch (e) {
+      remaining.push(payload);
+    }
+  }
+  _saveProgressRetryQueue(remaining);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    flushCloudProgress();
+  } else {
+    retryCloudProgressQueue();
+  }
+});
+window.addEventListener('pagehide', () => { flushCloudProgress(); });
 
 function isInShelf(bookId) {
   if (typeof _profileUser !== 'undefined' && _profileUser) return _onlineShelf.some(b => b.BookID === bookId);
