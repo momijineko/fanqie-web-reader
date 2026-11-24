@@ -177,7 +177,8 @@ async function fetchParagraphCommentReplies(commentId, chapterId, bookId) {
     return Array.isArray(data.data) ? data.data : [];
   })();
   inflight[key] = p;
-  p.finally(() => delete inflight[key]);
+  // Swallow rejection on the cleanup chain only — callers still get p's reject.
+  p.finally(() => delete inflight[key]).catch(() => {});
   return p;
 }
 
