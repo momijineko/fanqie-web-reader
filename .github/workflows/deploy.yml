@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: deploy-vps-main
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -18,7 +22,6 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # Always pin to current main tip (not a selected non-main dispatch ref).
           SHA=$(gh api "repos/${{ github.repository }}/commits/main" --jq .sha)
           echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "Deploy pin: $SHA"
@@ -49,6 +52,8 @@ jobs:
             export GIT_HTTP_LOW_SPEED_TIME=45
             cd "$APP_DIR"
 
+            # Fetch the pin for script extraction only — do NOT reset the live tree
+            # here. native-deploy.sh owns reset + restart and compares PREV_HEAD.
             fetch_pin() {
               local url="$1"
               git remote set-url origin "$url"
@@ -58,14 +63,9 @@ jobs:
               echo "github.com fetch slow/failed, trying ghproxy for pinned SHA"
               fetch_pin "https://ghproxy.net/https://github.com/momijineko/fanqie-web-reader.git"
             fi
-            git reset --hard "$EXPECTED_SHA"
-            GOT=$(git rev-parse HEAD)
-            if [ "$GOT" != "$EXPECTED_SHA" ]; then
-              echo "REFUSING deploy: HEAD $GOT != expected $EXPECTED_SHA"
-              exit 1
-            fi
             git remote set-url origin https://github.com/momijineko/fanqie-web-reader.git
-            install -m 755 scripts/native-deploy.sh "$HOME/bin/native-deploy.sh"
+            git show "$EXPECTED_SHA:scripts/native-deploy.sh" > /tmp/native-deploy.sh
+            install -m 755 /tmp/native-deploy.sh "$HOME/bin/native-deploy.sh"
 
             EXPECTED_SHA="$EXPECTED_SHA" "$HOME/bin/native-deploy.sh"
 

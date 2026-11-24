@@ -8,16 +8,28 @@
 #    content-addressed fallback. A mirror cannot substitute different code for
 #    the same SHA.
 # 3. Refuse to continue unless HEAD == EXPECTED_SHA after reset.
+# 4. Skip pip/restart when already on that SHA + APP_VERSION and services healthy
+#    (set FORCE_DEPLOY=1 to override).
 set -euo pipefail
 APP_DIR="${HOME}/fanqie-web-reader"
 cd "$APP_DIR"
+
+# Serialize Actions SSH + local timer against the same tree.
+# Parent (timer) may set FANQIE_DEPLOY_LOCK_HELD=1 after acquiring the same lock.
+if [ "${FANQIE_DEPLOY_LOCK_HELD:-0}" != "1" ]; then
+  LOCK_FILE="${FANQIE_DEPLOY_LOCK:-/tmp/fanqie-deploy.lock}"
+  exec 9>"$LOCK_FILE"
+  if ! flock -w 600 9; then
+    echo "REFUSING deploy: could not acquire $LOCK_FILE within 600s"
+    exit 1
+  fi
+fi
 
 export GIT_HTTP_LOW_SPEED_LIMIT=1000
 export GIT_HTTP_LOW_SPEED_TIME=45
 
 REPO_PATH="momijineko/fanqie-web-reader"
 GITHUB_URL="https://github.com/${REPO_PATH}.git"
-# Content-addressed fetch fallback only (never used to decide what "main" is).
 FETCH_URLS=(
   "$GITHUB_URL"
   "https://ghproxy.net/https://github.com/${REPO_PATH}.git"
@@ -25,13 +37,11 @@ FETCH_URLS=(
 
 resolve_main_sha() {
   local sha=""
-  # Prefer git protocol to github.com
   sha=$(timeout 45 git ls-remote "$GITHUB_URL" refs/heads/main 2>/dev/null | awk '{print $1; exit}') || true
   if [ -n "$sha" ] && [ "${#sha}" -eq 40 ]; then
     printf '%s\n' "$sha"
     return 0
   fi
-  # REST API as second trusted source
   sha=$(timeout 30 curl -fsS --connect-timeout 10 -m 30 \
     -H 'Accept: application/vnd.github+json' \
     -H 'User-Agent: fanqie-native-deploy' \
@@ -59,6 +69,13 @@ fetch_sha() {
   return 1
 }
 
+services_healthy() {
+  curl -fsS --noproxy '*' --connect-timeout 3 http://127.0.0.1:18921/readyz >/dev/null 2>&1 \
+    && curl -fsS --noproxy '*' --connect-timeout 3 http://127.0.0.1:8199/api/health >/dev/null 2>&1 \
+    && [ "$(systemctl --user is-active fanqie-fqapi.service || true)" = "active" ] \
+    && [ "$(systemctl --user is-active fanqie-web.service || true)" = "active" ]
+}
+
 # --- resolve pin ---
 if [ -n "${EXPECTED_SHA:-}" ]; then
   case "$EXPECTED_SHA" in
@@ -78,7 +95,9 @@ fi
 EXPECTED_SHA=$(printf '%s' "$EXPECTED_SHA" | tr '[:upper:]' '[:lower:]')
 echo "EXPECTED_SHA=$EXPECTED_SHA"
 
-# Keep remote URL on github.com for day-to-day metadata; fetches may temporarily switch.
+PREV_HEAD=$(git rev-parse HEAD 2>/dev/null | tr '[:upper:]' '[:lower:]' || echo "none")
+PREV_VER=$(grep -E '^APP_VERSION=' .env 2>/dev/null | cut -d= -f2- || true)
+
 git remote set-url origin "$GITHUB_URL"
 
 if ! git cat-file -e "${EXPECTED_SHA}^{commit}" 2>/dev/null; then
@@ -88,14 +107,12 @@ if ! git cat-file -e "${EXPECTED_SHA}^{commit}" 2>/dev/null; then
   }
 fi
 
-# Only fetch SemVer-looking tags (avoids hostile tag names from mirrors).
 fetch_semver_tags() {
   local url="$1"
   timeout 60 git fetch --force "$url" 'refs/tags/v*:refs/tags/v*'
 }
 git remote set-url origin "$GITHUB_URL"
 fetch_semver_tags origin || fetch_semver_tags "https://ghproxy.net/https://github.com/${REPO_PATH}.git" || true
-# Deepen for git describe when needed (best-effort)
 timeout 60 git fetch --deepen=200 origin main || true
 
 git reset --hard "$EXPECTED_SHA"
@@ -105,7 +122,7 @@ if [ "$GOT" != "$EXPECTED_SHA" ]; then
   exit 1
 fi
 git remote set-url origin "$GITHUB_URL"
-echo "Deploy commit: $(git rev-parse --short HEAD) ($GOT)"
+echo "Deploy commit: $(git rev-parse --short HEAD) ($GOT) (was $PREV_HEAD)"
 
 if [ ! -f .env ]; then
   cp .env.example .env
@@ -113,7 +130,6 @@ fi
 grep -q '^FQAPI_API=' .env || echo 'FQAPI_API=http://127.0.0.1:18921' >> .env
 grep -q '^CORS_ORIGINS=' .env || echo 'CORS_ORIGINS=https://fanqie.momijineko.cn,http://127.0.0.1:8199' >> .env
 
-# Version string must be a safe SemVer-ish token — never feed raw tag names to sed.
 VER=$(git describe --tags --match 'v[0-9]*' 2>/dev/null \
   || git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null \
   || true)
@@ -131,7 +147,7 @@ case "$VER" in
     exit 1
     ;;
 esac
-# Rewrite APP_VERSION without sed; write tempfile then os.replace (atomic).
+
 python3 - "$VER" <<'PY'
 import os
 import pathlib
@@ -169,18 +185,33 @@ except Exception:
 print(f"APP_VERSION={ver}")
 PY
 
+CODE_CHANGED=0
+VERSION_CHANGED=0
+[ "$PREV_HEAD" != "$GOT" ] && CODE_CHANGED=1
+[ "$PREV_VER" != "$VER" ] && VERSION_CHANGED=1
+
+if [ "${FORCE_DEPLOY:-0}" != "1" ] \
+  && [ "$CODE_CHANGED" = "0" ] \
+  && [ "$VERSION_CHANGED" = "0" ] \
+  && services_healthy; then
+  echo "Already on $GOT with APP_VERSION=$VER and healthy services — skip pip/restart"
+  exit 0
+fi
+
 if [ ! -x .venv/bin/python ]; then
   python3.11 -m venv .venv
 fi
 # shellcheck disable=SC1091
 . .venv/bin/activate
-# HTTPS mirror with TLS verification enabled (do not pass --trusted-host).
 PIP_INDEX="https://pypi.tuna.tsinghua.edu.cn/simple"
 python -m pip install -q -U pip -i "$PIP_INDEX"
 python -m pip install -q -r requirements.txt -i "$PIP_INDEX"
 
 systemctl --user daemon-reload
-systemctl --user restart fanqie-fqapi.service || true
+# Version-only change: restart web (reads APP_VERSION at process start). Code change: both.
+if [ "$CODE_CHANGED" = "1" ] || [ "${FORCE_DEPLOY:-0}" = "1" ]; then
+  systemctl --user restart fanqie-fqapi.service || true
+fi
 systemctl --user restart fanqie-web.service
 
 FQAPI_READY=0
@@ -197,9 +228,19 @@ if [ "$FQAPI_READY" != "1" ]; then
   exit 1
 fi
 
-WEB_CODE=$(curl -s --noproxy '*' -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8199/api/health || echo 000)
-echo "Web reader HTTP $WEB_CODE"
-if [ "$WEB_CODE" != "200" ]; then
+WEB_READY=0
+WEB_CODE=000
+for i in $(seq 1 40); do
+  WEB_CODE=$(curl -s --noproxy '*' -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8199/api/health || echo 000)
+  if [ "$WEB_CODE" = "200" ]; then
+    echo "Web reader HTTP $WEB_CODE"
+    WEB_READY=1
+    break
+  fi
+  echo "web health check $i ... HTTP $WEB_CODE"
+  sleep 3
+done
+if [ "$WEB_READY" != "1" ]; then
   echo "health check failed (fqapi=$(systemctl --user is-active fanqie-fqapi.service) web=$(systemctl --user is-active fanqie-web.service))"
   exit 1
 fi

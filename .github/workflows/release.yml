@@ -95,14 +95,15 @@ jobs:
           DELETIONS=$(python -c 'import json; print(json.load(open("/tmp/release-meta/stats.json"))["deletions"])')
           CHANGED=$(python -c 'import json; print(json.load(open("/tmp/release-meta/stats.json"))["changed_files"])')
 
+          # Use --flag=value so titles starting with "-" are not parsed as options.
           RESULT=$(python scripts/resolve_bump.py --json \
-            --title "$TITLE" \
-            --labels "$LABELS" \
-            --commits "$COMMITS" \
-            --changed-files "$CHANGED" \
-            --additions "$ADDITIONS" \
-            --deletions "$DELETIONS" \
-            --current-tag "$CURRENT")
+            --title="$TITLE" \
+            --labels="$LABELS" \
+            --commits="$COMMITS" \
+            --changed-files="$CHANGED" \
+            --additions="$ADDITIONS" \
+            --deletions="$DELETIONS" \
+            --current-tag="$CURRENT")
           echo "result=$RESULT"
 
           BUMP=$(echo "$RESULT" | python -c 'import json,sys; print(json.load(sys.stdin)["bump"])')
