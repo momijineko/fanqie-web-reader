@@ -782,6 +782,7 @@ async function _tryAutoLogin() {
   const wasLoggedIn = !!_profileUser;
   _profileUser = null;
   clearCachedUser();
+  if (typeof clearProgressRetryQueue === 'function') clearProgressRetryQueue();
   _autoLoginPending = false;
   if (wasLoggedIn) router();
 }
@@ -1027,6 +1028,7 @@ async function doLogout() {
   clearCachedUser();
   clearCachedShelf();
   clearFolderCache();
+  if (typeof clearProgressRetryQueue === 'function') clearProgressRetryQueue();
   renderProfile($('app'));
   showToast('已退出登录 · 本地书架数据不受影响');
 }

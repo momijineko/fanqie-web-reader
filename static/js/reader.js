@@ -1,5 +1,6 @@
 // ====== Shared reader helpers ======
-function renderParas(paras, authorSpeak) {
+function renderParas(paras, authorSpeak, chapterIdx) {
+  const chAttr = chapterIdx != null ? ` data-chapter-idx="${chapterIdx}"` : '';
   let html = '';
   for (let pi = 0; pi < paras.length; pi++) {
     const text = paras[pi];
@@ -8,9 +9,9 @@ function renderParas(paras, authorSpeak) {
     if (imgMatch) { html += `<img class="content-img" src="${safeImgUrl(text)}">`; continue; }
     const innerImgs = text.match(/<img[^>]+src="([^"]+)"[^>]*>/gi);
     if (innerImgs) { innerImgs.forEach(imgTag => { const src = imgTag.match(/src="([^"]+)"/); if (src) html += `<img class="content-img" src="${safeImgUrl(src[1])}">`; }); continue; }
-    html += `<div class="para-wrap" data-para-idx="${pi}"><p>${escapeHtml(text)}<span class="para-badge" data-para-idx="${pi}" onclick="event.stopPropagation();openParaComment(${pi})"></span></p></div>`;
+    html += `<div class="para-wrap" data-para-idx="${pi}"${chAttr}><p>${escapeHtml(text)}<span class="para-badge" data-para-idx="${pi}" onclick="event.stopPropagation();openParaComment(${pi})"></span></p></div>`;
   }
-  if (authorSpeak) html += `<div class="author-speak"><i data-lucide="message-circle" width="14" height="14"></i> 作者说：${escapeHtml(authorSpeak)}</div>`;
+  if (authorSpeak) html += `<div class="author-speak"${chAttr}><i data-lucide="message-circle" width="14" height="14"></i> 作者说：${escapeHtml(authorSpeak)}</div>`;
   return html;
 }
 
@@ -138,7 +139,7 @@ function renderScrollReader(app, bid, idx) {
     <div class="reader-chapter-info">
       <div class="reader-bookname">${escapeHtml(d.bookName)} · 第 ${idx+1}/${total} 章 · 约 ${readMin} 分钟</div>
     </div>
-    <div class="reader-content" id="readerContent">${renderParas(paras, c.authorSpeak)}</div>
+    <div class="reader-content" id="readerContent">${renderParas(paras, c.authorSpeak, idx)}</div>
     <div class="chapter-end">· · ·</div>
     <div class="auto-next-indicator hidden" id="autoNextIndicator">正在加载下一章...</div>
     <div class="reader-nav">
@@ -236,17 +237,39 @@ function teardownScrollProgressSave() {
   }
 }
 
-function captureVisibleScrollOffset() {
-  const offset = { scrollY: window.scrollY, paraIdx: 0, charOffset: 0 };
+function captureVisibleScrollOffset(fallbackChapterIdx) {
+  const offset = {
+    scrollY: window.scrollY,
+    paraIdx: 0,
+    charOffset: 0,
+    chapterIdx: fallbackChapterIdx != null ? fallbackChapterIdx : currentChapterIdx,
+  };
   const wraps = document.querySelectorAll('#readerContent .para-wrap[data-para-idx]');
   for (const wrap of wraps) {
     const rect = wrap.getBoundingClientRect();
     if (rect.bottom > 80) {
       offset.paraIdx = parseInt(wrap.dataset.paraIdx, 10) || 0;
+      if (wrap.dataset.chapterIdx !== undefined && wrap.dataset.chapterIdx !== '') {
+        offset.chapterIdx = parseInt(wrap.dataset.chapterIdx, 10);
+      }
       break;
     }
   }
   return offset;
+}
+
+function saveVisibleScrollProgress(bid, total, fallbackTitle) {
+  const d = cache.detail[bid];
+  if (!d) return;
+  const offset = captureVisibleScrollOffset(currentChapterIdx);
+  const saveIdx = Math.max(0, Math.min(offset.chapterIdx != null ? offset.chapterIdx : currentChapterIdx, d.chapters.length - 1));
+  const ch = d.chapters[saveIdx];
+  if (!ch) return;
+  // Continuous-document Y only applies to the chapter that owns the initial content
+  if (saveIdx !== (parseInt(document.querySelector('#readerContent .para-wrap')?.dataset.chapterIdx, 10) || 0)) {
+    offset.scrollY = 0;
+  }
+  saveReaderProgress(bid, saveIdx, ch.ChapterID, ch.Name || fallbackTitle || '', total, offset);
 }
 
 function setupScrollProgressSave(bid, idx, chapterId, chapterTitle, total) {
@@ -256,11 +279,7 @@ function setupScrollProgressSave(bid, idx, chapterId, chapterTitle, total) {
     _scrollProgressTimer = setTimeout(() => {
       // Bail once the scroll reader is gone (listener must not survive navigation)
       if (currentBookId !== bid || !$('scrollReader') || getReadMode() !== 'scroll') return;
-      const d = cache.detail[bid];
-      if (!d || !d.chapters[currentChapterIdx]) return;
-      const offset = captureVisibleScrollOffset();
-      const ch = d.chapters[currentChapterIdx];
-      saveReaderProgress(bid, currentChapterIdx, ch.ChapterID, ch.Name || chapterTitle, total, offset);
+      saveVisibleScrollProgress(bid, total, chapterTitle);
     }, 600);
   };
   window._scrollProgressOnScroll = onScrollSave;
@@ -291,7 +310,7 @@ function setupScrollAutoNext(bid, idx) {
         if (content) {
           const div = document.createElement('div');
           div.className = 'auto-next-chapter';
-          div.innerHTML = `<div class="auto-next-chapter"><div class="reader-title">${escapeHtml(d.chapters[nextIdx].Name||'第'+(nextIdx+1)+'章')}</div>` + renderParas(nc.paragraphs, nc.authorSpeak) + `<div class="chapter-end">本章已读完</div></div>`;
+          div.innerHTML = `<div class="auto-next-chapter" data-chapter-idx="${nextIdx}"><div class="reader-title">${escapeHtml(d.chapters[nextIdx].Name||'第'+(nextIdx+1)+'章')}</div>` + renderParas(nc.paragraphs, nc.authorSpeak, nextIdx) + `<div class="chapter-end">本章已读完</div></div>`;
           content.appendChild(div);
           appendedChapters++;
           currentChapterIdx = nextIdx;

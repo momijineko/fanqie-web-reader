@@ -47,13 +47,16 @@ function router() {
     } catch (e) {}
     if (currentBookId && cache.detail[currentBookId]) {
       const d = cache.detail[currentBookId];
-      const ch = d.chapters[currentChapterIdx];
-      if (ch) {
-        // Keep the visible paragraph anchor so page-mode resume is not wiped to 0
-        const offset = typeof captureVisibleScrollOffset === 'function'
-          ? captureVisibleScrollOffset()
-          : { scrollY: window.scrollY, paraIdx: 0, charOffset: 0 };
-        saveReaderProgress(currentBookId, currentChapterIdx, ch.ChapterID, ch.Name || '', d.chapters.length, offset);
+      // Attribute the visible paragraph to its owning chapter (not currentChapterIdx after auto-next)
+      if (typeof saveVisibleScrollProgress === 'function') {
+        saveVisibleScrollProgress(currentBookId, d.chapters.length, '');
+      } else {
+        const ch = d.chapters[currentChapterIdx];
+        if (ch) {
+          saveReaderProgress(currentBookId, currentChapterIdx, ch.ChapterID, ch.Name || '', d.chapters.length, {
+            scrollY: window.scrollY, paraIdx: 0, charOffset: 0,
+          });
+        }
       }
     }
     if (typeof teardownScrollProgressSave === 'function') teardownScrollProgressSave();
