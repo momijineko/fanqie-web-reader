@@ -1,4 +1,3 @@
-import asyncio
 import hashlib
 import time
 from urllib.parse import urlparse
@@ -18,13 +17,9 @@ from shared import (
     require_resource_id,
 )
 
-# 段评列表不含楼中楼正文，需另调 reply/list。限制并发与条数，避免拖慢面板打开。
-# 前端 fetchWithTimeout 默认 15s；楼中楼补全必须远低于该值，超时则退回仅主评。
-_REPLY_ENRICH_MAX_COMMENTS = 8
-_REPLY_ENRICH_PER_COMMENT = 5
-_REPLY_ENRICH_CONCURRENCY = 4
-_REPLY_ENRICH_BUDGET_S = 4.0
-_REPLY_FETCH_TIMEOUT_S = 3.5
+# 楼中楼按需拉取（点击展开），单次条数上限。
+_REPLY_FETCH_COUNT = 20
+_REPLY_FETCH_TIMEOUT_S = 12.0
 
 router = APIRouter()
 
@@ -38,6 +33,13 @@ class ParaCommentsPayload(BaseModel):
     chapter_id: str = Field(..., min_length=1)
     book_id: str = ""
     paragraph_idx: int = 0
+    count: int = 20
+
+
+class ParaCommentRepliesPayload(BaseModel):
+    comment_id: str = Field(..., min_length=1)
+    chapter_id: str = Field(..., min_length=1)
+    book_id: str = Field(..., min_length=1)
     count: int = 20
 
 
@@ -220,7 +222,7 @@ async def paragraph_comments(body: ParaCommentsPayload):
     fqapi book_reviews 对 aid=1967 需 server_channel=9（阅读器列表常用的 18
     会 103001）。unidbg 仍用其原 channel=18。计数继续走 idea_list。
 
-    段评列表只带 reply_count，楼中楼正文需另调 reply/list 再拼进 reply_list。
+    列表只返回主评 + reply_count；楼中楼由 /api/paragraph_comment_replies 按需拉取。
     """
     chapter_id = require_resource_id(body.chapter_id, "chapter_id")
     book_id = require_resource_id(body.book_id, "book_id") if body.book_id else ""
@@ -272,70 +274,44 @@ async def paragraph_comments(body: ParaCommentsPayload):
             )
 
     if comments:
-        await _enrich_comments_with_replies(comments, book_id=book_id, chapter_id=chapter_id)
+        # 列表不预拉楼中楼；前端点「展开」再走 replies 接口。
+        for c in comments:
+            if isinstance(c, dict):
+                c.pop("reply_list", None)
         return {"code": 200, "data": comments, "msg": "success"}
 
     return {"code": 200, "data": [], "msg": "no paragraph comments"}
 
 
-async def _enrich_comments_with_replies(comments: list, book_id: str, chapter_id: str) -> None:
-    """Fill reply_list for comments that only expose reply_count.
+@router.post("/api/paragraph_comment_replies")
+async def paragraph_comment_replies(body: ParaCommentRepliesPayload):
+    """Lazy-load nested replies for one paragraph comment (click to expand)."""
+    comment_id = require_resource_id(body.comment_id, "comment_id")
+    chapter_id = require_resource_id(body.chapter_id, "chapter_id")
+    book_id = require_resource_id(body.book_id, "book_id")
+    count = max(1, min(int(body.count or _REPLY_FETCH_COUNT), 50))
 
-    Best-effort: never let reply lookups delay past ``_REPLY_ENRICH_BUDGET_S``.
-    Parent comments must still return if enrichment times out.
-    """
-    if not book_id or not chapter_id:
-        return
-    targets = []
-    for c in comments:
-        if not isinstance(c, dict):
-            continue
-        existing = c.get("reply_list")
-        if isinstance(existing, list) and existing:
-            continue
-        reply_count = c.get("reply_count") or 0
-        comment_id = str(c.get("comment_id") or "").strip()
-        try:
-            reply_count = int(reply_count)
-        except (TypeError, ValueError):
-            reply_count = 0
-        if reply_count > 0 and comment_id and comment_id.isdigit():
-            targets.append(c)
-        if len(targets) >= _REPLY_ENRICH_MAX_COMMENTS:
-            break
-    if not targets:
-        return
+    if PARA_COMMENT_MOCK:
+        return {
+            "code": 200,
+            "data": _mock_para_replies(comment_id),
+            "msg": "success (mock)",
+        }
 
-    sem = asyncio.Semaphore(_REPLY_ENRICH_CONCURRENCY)
-
-    async def _one(c: dict):
-        async with sem:
-            replies = await _fetch_comment_replies(
-                comment_id=str(c["comment_id"]),
-                book_id=book_id,
-                chapter_id=chapter_id,
-                count=_REPLY_ENRICH_PER_COMMENT,
-            )
-            if replies:
-                c["reply_list"] = replies
-
-    try:
-        await asyncio.wait_for(
-            asyncio.gather(*[_one(c) for c in targets], return_exceptions=True),
-            timeout=_REPLY_ENRICH_BUDGET_S,
-        )
-    except asyncio.TimeoutError:
-        logger.info(
-            "paragraph reply enrich timed out after %.1fs (returning parent comments)",
-            _REPLY_ENRICH_BUDGET_S,
-        )
+    replies = await _fetch_comment_replies(
+        comment_id=comment_id,
+        book_id=book_id,
+        chapter_id=chapter_id,
+        count=count,
+    )
+    return {"code": 200, "data": replies, "msg": "success" if replies else "no replies"}
 
 
 async def _fetch_comment_replies(
     comment_id: str,
     book_id: str,
     chapter_id: str,
-    count: int = _REPLY_ENRICH_PER_COMMENT,
+    count: int = _REPLY_FETCH_COUNT,
 ) -> list:
     """Fetch nested replies for one paragraph comment via fqapi, then unidbg."""
     comment_id = require_resource_id(comment_id, "comment_id")
@@ -417,22 +393,30 @@ def _mock_para_comments(chapter_id: str, paragraph_idx: int) -> list:
         }
         if i == 0 and seed % 4 == 0:
             comment["images"] = ["https://picsum.photos/seed/para{}_{}/300/200".format(paragraph_idx, i)]
-        # First comment usually has nested replies so mock UI covers 楼中楼.
+        # First comment advertises replies; bodies come from replies endpoint on expand.
         if i == 0:
-            reply_user = users[(user_idx + 2) % len(users)]
-            comment["reply_count"] = 1
-            comment["reply_list"] = [
-                {
-                    "user_name": reply_user["name"],
-                    "avatar_url": reply_user["avatar"],
-                    "content": "同感！",
-                    "create_time": comment["create_time"] + 1800,
-                    "digg_count": 3,
-                    "reply_to_user_name": users[user_idx]["name"],
-                }
-            ]
+            comment["reply_count"] = 2
         result.append(comment)
     return result
+
+
+def _mock_para_replies(comment_id: str) -> list:
+    """Mock nested replies for PARA_COMMENT_MOCK expand clicks."""
+    now = int(time.time())
+    seed = int(hashlib.md5(str(comment_id).encode()).hexdigest()[:8], 16)
+    users = ["夜读人", "墨染书香", "浮生若梦"]
+    texts = ["同感！", "这段确实绝了", "作者伏笔埋得好"]
+    out = []
+    for i in range(2):
+        out.append({
+            "user_name": users[(seed + i) % len(users)],
+            "avatar_url": f"https://i.pravatar.cc/80?img={(seed + i) % 10 + 1}",
+            "content": texts[(seed + i) % len(texts)],
+            "create_time": now - (i + 1) * 900,
+            "digg_count": (seed + i) % 12,
+            "reply_to_user_name": "书虫小王" if i == 1 else "",
+        })
+    return out
 
 
 def _fix_img_url(url: str) -> str:
@@ -570,7 +554,7 @@ def _normalize_replies(raw) -> list:
         if cand and len(cand) > len(replies):
             replies = cand
     out = []
-    for rc in replies[:_REPLY_ENRICH_PER_COMMENT]:
+    for rc in replies[:_REPLY_FETCH_COUNT]:
         flat = _normalize_reply_item(rc)
         if flat:
             out.append(flat)
@@ -772,12 +756,16 @@ def _normalize_comments(raw) -> list:
             replies = list(replies.values())
         if replies and isinstance(replies, list):
             flat_replies = []
-            for rc in replies[:_REPLY_ENRICH_PER_COMMENT]:
+            for rc in replies[:3]:
                 flat = _normalize_reply_item(rc)
                 if flat:
                     flat_replies.append(flat)
             if flat_replies:
+                # Keep embedded previews only as a hint for reply_count if missing;
+                # list endpoint strips reply_list before returning to clients.
                 comment["reply_list"] = flat_replies
+                if not comment.get("reply_count"):
+                    comment["reply_count"] = len(flat_replies)
 
         result.append(comment)
     return result

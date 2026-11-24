@@ -157,6 +157,33 @@ async function fetchParagraphComments(chapterId, paragraphIdx, bookId) {
   return p;
 }
 
+async function fetchParagraphCommentReplies(commentId, chapterId, bookId) {
+  const key = `pcr_${commentId}`;
+  if (inflight[key]) return inflight[key];
+  const p = (async () => {
+    try {
+      const r = await fetchWithTimeout(`${API}/api/paragraph_comment_replies`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          comment_id: String(commentId),
+          chapter_id: chapterId,
+          book_id: bookId || '',
+          count: 20,
+        }),
+      });
+      const data = await r.json();
+      if (data.code === 200 && data.data) {
+        return Array.isArray(data.data) ? data.data : [];
+      }
+      return [];
+    } catch(e) { return []; }
+  })();
+  inflight[key] = p;
+  p.finally(() => delete inflight[key]);
+  return p;
+}
+
 // Smart preload: next 3 chapters + prev 1
 function preloadAdjacent(bid, idx) {
   const ch = cache.detail[bid]; if (!ch) return;
