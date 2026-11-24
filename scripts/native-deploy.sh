@@ -88,10 +88,13 @@ if ! git cat-file -e "${EXPECTED_SHA}^{commit}" 2>/dev/null; then
   }
 fi
 
-# Tags from github.com when possible (version string); non-fatal if slow.
+# Only fetch SemVer-looking tags (avoids hostile tag names from mirrors).
+fetch_semver_tags() {
+  local url="$1"
+  timeout 60 git fetch --force "$url" 'refs/tags/v*:refs/tags/v*'
+}
 git remote set-url origin "$GITHUB_URL"
-timeout 60 git fetch --tags --force origin || \
-  timeout 60 git fetch --tags --force "https://ghproxy.net/https://github.com/${REPO_PATH}.git" || true
+fetch_semver_tags origin || fetch_semver_tags "https://ghproxy.net/https://github.com/${REPO_PATH}.git" || true
 # Deepen for git describe when needed (best-effort)
 timeout 60 git fetch --deepen=200 origin main || true
 
@@ -110,23 +113,42 @@ fi
 grep -q '^FQAPI_API=' .env || echo 'FQAPI_API=http://127.0.0.1:18921' >> .env
 grep -q '^CORS_ORIGINS=' .env || echo 'CORS_ORIGINS=https://fanqie.momijineko.cn,http://127.0.0.1:8199' >> .env
 
-VER=$(git describe --tags 2>/dev/null \
-  || git describe --tags --abbrev=0 2>/dev/null \
+# Version string must be a safe SemVer-ish token — never feed raw tag names to sed.
+VER=$(git describe --tags --match 'v[0-9]*' 2>/dev/null \
+  || git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null \
   || true)
 if [ -z "${VER}" ]; then
-  LATEST=$(git tag -l 'v*' --sort=-v:refname | head -1 || true)
+  LATEST=$(git tag -l 'v[0-9]*' --sort=-v:refname | head -1 || true)
   if [ -n "${LATEST}" ]; then
-    VER="${LATEST}+$(git rev-parse --short HEAD)"
+    VER="${LATEST}-g$(git rev-parse --short HEAD)"
   else
-    VER="0.0.0-dev+$(git rev-parse --short HEAD)"
+    VER="0.0.0-dev-g$(git rev-parse --short HEAD)"
   fi
 fi
-if grep -q '^APP_VERSION=' .env; then
-  sed -i "s|^APP_VERSION=.*|APP_VERSION=${VER}|" .env
-else
-  printf '\nAPP_VERSION=%s\n' "$VER" >> .env
-fi
-echo "APP_VERSION=${VER}"
+case "$VER" in
+  ''|*[!A-Za-z0-9._+-]* )
+    echo "REFUSING deploy: unsafe APP_VERSION from tags: $VER"
+    exit 1
+    ;;
+esac
+# Rewrite APP_VERSION without sed (tag names must not reach the shell as code).
+python3 - "$VER" <<'PY'
+import pathlib, sys
+ver = sys.argv[1]
+path = pathlib.Path(".env")
+lines = path.read_text(encoding="utf-8").splitlines() if path.exists() else []
+out, found = [], False
+for line in lines:
+    if line.startswith("APP_VERSION="):
+        out.append(f"APP_VERSION={ver}")
+        found = True
+    else:
+        out.append(line)
+if not found:
+    out.append(f"APP_VERSION={ver}")
+path.write_text("\n".join(out) + "\n", encoding="utf-8")
+print(f"APP_VERSION={ver}")
+PY
 
 if [ ! -x .venv/bin/python ]; then
   python3.11 -m venv .venv

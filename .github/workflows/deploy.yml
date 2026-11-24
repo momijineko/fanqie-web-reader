@@ -9,11 +9,24 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Production deploys only from main tip — never an arbitrary workflow_dispatch ref.
+    if: github.ref == 'refs/heads/main'
     steps:
+      - name: Resolve main tip SHA
+        id: pin
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Always pin to current main tip (not a selected non-main dispatch ref).
+          SHA=$(gh api "repos/${{ github.repository }}/commits/main" --jq .sha)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "Deploy pin: $SHA"
+
       - name: Deploy native stack via SSH
         uses: appleboy/ssh-action@v1.2.0
         env:
-          EXPECTED_SHA: ${{ github.sha }}
+          EXPECTED_SHA: ${{ steps.pin.outputs.sha }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
@@ -29,9 +42,9 @@ jobs:
 
             APP_DIR="$HOME/fanqie-web-reader"
             test -d "$APP_DIR/.git"
+            test -n "$EXPECTED_SHA"
+            test "${#EXPECTED_SHA}" -eq 40
 
-            # Bootstrap / refresh deploy script from the pinned commit using the
-            # same trust model as native-deploy.sh (SHA from Actions = trusted).
             export GIT_HTTP_LOW_SPEED_LIMIT=1000
             export GIT_HTTP_LOW_SPEED_TIME=45
             cd "$APP_DIR"
@@ -56,6 +69,5 @@ jobs:
 
             EXPECTED_SHA="$EXPECTED_SHA" "$HOME/bin/native-deploy.sh"
 
-            # native-deploy.sh already requires fqapi /readyz + both units active
             free -h
             echo "Deployment completed successfully!"
