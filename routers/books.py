@@ -367,9 +367,10 @@ async def content(chapter_id: str = Query(...), book_id: str = Query(default="")
     if raw is not None:
         data = raw.get("data") or {}
         content_html = data.get("content") or ""
+        # _html_paragraphs already strips tags / falls back to plain text.
+        # Do not re-split the raw HTML on newlines — that caches leftover markup
+        # and skips unidbg/community for the whole _CONTENT_TTL window.
         paragraphs = _html_paragraphs(content_html)
-        if not paragraphs and content_html:
-            paragraphs = [l for l in content_html.split("\n") if l.strip()]
         if paragraphs:
             result = {
                 "code": 200,
