@@ -9,93 +9,62 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Deploy to VPS via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      env:
-        FQAPI_TOKEN: ${{ secrets.FQAPI_TOKEN }}
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USERNAME }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        port: ${{ secrets.VPS_PORT || 22 }}
-        command_timeout: 30m
-        envs: FQAPI_TOKEN
-        script: |
-            echo "=== Initial disk ==="
-            df -h /
-            echo "=== Initial memory ==="
-            free -h
-
-            docker compose -f /projects/fanqie-web-reader/docker-compose.yml down --remove-orphans 2>/dev/null || true
-            # Stop legacy unidbg if still running from older deploys
-            if [ -f /opt/unidbg/unidbg.pid ]; then
-              OLD_PID=$(cat /opt/unidbg/unidbg.pid)
-              kill "$OLD_PID" 2>/dev/null || true
-              rm -f /opt/unidbg/unidbg.pid
-            fi
-            rm -rf /tmp/unidbg_* /tmp/hsperfdata_* 2>/dev/null || true
-            docker system prune -af 2>/dev/null || true
-            apt-get clean 2>/dev/null || true
-
-            if ! swapon --show | grep -q /swapfile; then
-              if [ ! -f /swapfile ]; then
-                echo "Creating 1GB swap..."
-                dd if=/dev/zero of=/swapfile bs=1M count=1024
-                chmod 600 /swapfile
-                mkswap /swapfile
-              fi
-              swapon /swapfile
-            fi
-
-            echo "=== After cleanup ==="
+      - name: Deploy native stack via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            echo "=== disk / memory ==="
             df -h /
             free -h
 
-            cd /projects/fanqie-web-reader
-            git fetch origin main
+            APP_DIR="$HOME/fanqie-web-reader"
+            test -d "$APP_DIR/.git"
+            cd "$APP_DIR"
+
+            # Prefer CN mirror for git pull from Beijing VPS; fall back to GitHub.
+            git remote set-url origin https://kkgithub.com/momijineko/fanqie-web-reader.git || true
+            if ! git fetch --depth 1 origin main; then
+              echo "kkgithub fetch failed, trying github.com"
+              git remote set-url origin https://github.com/momijineko/fanqie-web-reader.git
+              git fetch --depth 1 origin main
+            fi
             git reset --hard origin/main
-            echo "Current commit: $(git rev-parse --short HEAD)"
+            echo "Deploy commit: $(git rev-parse --short HEAD)"
 
-            # Persist / inject FQAPI_TOKEN into .env (required by compose)
-            TOKEN_FILE=/opt/fqapi/token
-            mkdir -p /opt/fqapi
-            if [ -n "${FQAPI_TOKEN:-}" ]; then
-              umask 077
-              printf '%s' "$FQAPI_TOKEN" > "$TOKEN_FILE"
-            elif [ -s "$TOKEN_FILE" ]; then
-              FQAPI_TOKEN=$(cat "$TOKEN_FILE")
-            else
-              umask 077
-              FQAPI_TOKEN=$(openssl rand -hex 32)
-              printf '%s' "$FQAPI_TOKEN" > "$TOKEN_FILE"
-            fi
-            chmod 600 "$TOKEN_FILE"
-            export FQAPI_TOKEN
-            if [ -f .env ]; then
-              if grep -q '^FQAPI_TOKEN=' .env; then
-                sed -i "s|^FQAPI_TOKEN=.*|FQAPI_TOKEN=${FQAPI_TOKEN}|" .env
-              else
-                printf '\nFQAPI_TOKEN=%s\n' "$FQAPI_TOKEN" >> .env
-              fi
-            else
+            # Keep existing .env (FQAPI_TOKEN / CORS). Only fill missing keys from example.
+            if [ ! -f .env ]; then
               cp .env.example .env
-              sed -i "s|^FQAPI_TOKEN=.*|FQAPI_TOKEN=${FQAPI_TOKEN}|" .env
+            fi
+            if ! grep -q '^FQAPI_API=' .env; then
+              echo 'FQAPI_API=http://127.0.0.1:18921' >> .env
+            fi
+            if ! grep -q '^CORS_ORIGINS=' .env; then
+              echo 'CORS_ORIGINS=https://fanqie.momijineko.cn,http://127.0.0.1:8199' >> .env
             fi
 
-            export APP_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0-dev")
-            echo "APP_VERSION=$APP_VERSION"
+            if [ ! -x .venv/bin/python ]; then
+              python3.11 -m venv .venv
+            fi
+            # shellcheck disable=SC1091
+            . .venv/bin/activate
+            python -m pip install -q -U pip -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
+            python -m pip install -q -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn
 
-            echo "Building fqapi + web reader (first fqapi build may take several minutes)..."
-            docker compose build
-            docker compose up -d
+            systemctl --user daemon-reload
+            systemctl --user restart fanqie-fqapi.service || true
+            systemctl --user restart fanqie-web.service
 
-            echo "Waiting for fqapi readiness..."
+            echo "Waiting for fqapi /readyz ..."
             FQAPI_READY=0
             for i in $(seq 1 40); do
-              if curl -fsS --connect-timeout 3 http://127.0.0.1:18921/readyz >/dev/null 2>&1 \
-                || docker exec fanqie-fqapi curl -fsS http://127.0.0.1:18921/readyz >/dev/null 2>&1; then
+              if curl -fsS --noproxy '*' --connect-timeout 3 http://127.0.0.1:18921/readyz >/dev/null 2>&1; then
                 echo "fqapi READY"
                 FQAPI_READY=1
                 break
@@ -105,22 +74,21 @@ jobs:
             done
             if [ "$FQAPI_READY" != "1" ]; then
               echo "!!! fqapi never became ready !!!"
-              docker compose logs --tail=80 fqapi || true
+              systemctl --user --no-pager -l status fanqie-fqapi.service || true
+              journalctl --user -u fanqie-fqapi.service -n 50 --no-pager || true
               exit 1
             fi
 
-            sleep 5
-            echo "=== Final ==="
-            docker compose ps
-            WEB_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8199/api/health || echo 000)
+            sleep 2
+            WEB_CODE=$(curl -s --noproxy '*' -o /dev/null -w "%{http_code}" --connect-timeout 5 http://127.0.0.1:8199/api/health || echo 000)
             echo "Web reader HTTP $WEB_CODE"
             if [ "$WEB_CODE" != "200" ]; then
               echo "!!! web reader health check failed !!!"
-              docker compose logs --tail=80 fanqie-web-reader || true
+              systemctl --user --no-pager -l status fanqie-web.service || true
+              journalctl --user -u fanqie-web.service -n 50 --no-pager || true
               exit 1
             fi
-            curl -fsS http://127.0.0.1:18921/healthz || docker exec fanqie-fqapi curl -fsS http://127.0.0.1:18921/healthz
+
+            systemctl --user --no-pager is-active fanqie-fqapi.service fanqie-web.service
             free -h
-            df -h /
-            docker image prune -f
             echo "Deployment completed successfully!"
