@@ -25,26 +25,63 @@ function getDisplayTheme() {
   return getTheme();
 }
 
-function saveReaderProgress(bid, idx, chapterId, chapterTitle, total) {
+function saveReaderProgress(bid, idx, chapterId, chapterTitle, total, offset) {
+  const now = Date.now();
   const data = loadData();
-  data.readingHistory = { bookId: bid, name: (cache.detail[bid]||{}).bookName||'', chapterIdx: idx, chapterName: chapterTitle, totalChapters: total, updatedAt: Date.now() };
+  data.readingHistory = { bookId: bid, name: (cache.detail[bid]||{}).bookName||'', chapterIdx: idx, chapterName: chapterTitle, totalChapters: total, updatedAt: now };
   saveReadingHistory(data.readingHistory);
-  saveBookProgress(bid, { chapterIdx: idx, chapterId: String(chapterId), chapterTitle, totalChapters: total, updatedAt: Date.now() });
+  const prev = getBookProgress(bid);
+  const sameChapter = prev && String(prev.chapterId) === String(chapterId);
+  const prog = {
+    chapterIdx: idx,
+    chapterId: String(chapterId),
+    chapterTitle,
+    totalChapters: total,
+    updatedAt: now,
+    // Reset chapter-internal offset on chapter change unless explicitly provided
+    paraIdx: offset && offset.paraIdx != null ? offset.paraIdx : (sameChapter ? (prev.paraIdx || 0) : 0),
+    charOffset: offset && offset.charOffset != null ? offset.charOffset : (sameChapter ? (prev.charOffset || 0) : 0),
+    scrollY: offset && offset.scrollY != null ? offset.scrollY : (sameChapter ? (prev.scrollY || 0) : 0),
+    pageRatio: offset && offset.pageRatio != null ? offset.pageRatio : (sameChapter ? (prev.pageRatio || 0) : 0),
+  };
+  saveBookProgress(bid, prog);
   if (!data.stats.readSet) data.stats.readSet = [];
   const csid = String(chapterId);
   if (!data.stats.readSet.includes(csid)) { data.stats.readSet.push(csid); data.stats.chaptersRead = data.stats.readSet.length; saveStats(data.stats); }
-  if (_profileUser) {
-    fetch(`${API}/api/user/progress`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ book_id: bid, item_id: chapterId, index: idx }),
-    }).catch(() => {});
+  queueCloudProgress(bid, chapterId, idx);
+  try { localStorage.setItem('scroll_' + chapterId, String(offset && offset.scrollY != null ? offset.scrollY : (getReadMode() === 'scroll' ? window.scrollY : 0))); } catch (e) {}
+}
+
+function capturePageOffset() {
+  if (!pg.pagesMeta || !pg.pagesMeta.length) {
+    return { paraIdx: 0, charOffset: 0, pageRatio: pg.totalPages > 1 ? pg.curPage / (pg.totalPages - 1) : 0 };
   }
+  const meta = pg.pagesMeta[Math.min(pg.curPage, pg.pagesMeta.length - 1)] || { paraIdx: 0, charOffset: 0 };
+  return {
+    paraIdx: meta.paraIdx || 0,
+    charOffset: meta.charOffset || 0,
+    pageRatio: pg.totalPages > 1 ? pg.curPage / (pg.totalPages - 1) : 0,
+  };
+}
+
+function findPageForOffset(paraIdx, charOffset, pageRatio) {
+  if (pg.pagesMeta && pg.pagesMeta.length) {
+    let best = 0;
+    for (let i = 0; i < pg.pagesMeta.length; i++) {
+      const m = pg.pagesMeta[i];
+      if (m.paraIdx < paraIdx || (m.paraIdx === paraIdx && m.charOffset <= charOffset)) best = i;
+      else break;
+    }
+    return best;
+  }
+  if (pageRatio != null && pg.totalPages > 1) return Math.min(pg.totalPages - 1, Math.round(pageRatio * (pg.totalPages - 1)));
+  return 0;
 }
 
 // ====== Reader state ======
-let pg = { bid:'', idx:0, total:0, totalPages:1, curPage:0, animating:false, swipeStartX:0, swipeStartY:0, swipeStartTime:0, swipeActive:false, pages:[] };
+let pg = { bid:'', idx:0, total:0, totalPages:1, curPage:0, animating:false, swipeStartX:0, swipeStartY:0, swipeStartTime:0, swipeActive:false, pages:[], pagesMeta:[] };
 let scrollState = { lastScrollY: 0, ticking: false };
+let _scrollProgressTimer = 0;
 
 // ====== Reader dispatcher ======
 function renderReader(app, bid, idx) {
@@ -148,16 +185,59 @@ function renderScrollReader(app, bid, idx) {
   document.documentElement.style.setProperty('--reader-line-height', getLineHeight());
   applyFont();
 
-  const savedScroll = sessionStorage.getItem('scroll_' + chapterId);
-  if (savedScroll) setTimeout(() => window.scrollTo(0, parseInt(savedScroll)), 50);
-  else window.scrollTo(0, 0);
+  const prog = getBookProgress(bid);
+  let savedScroll = 0;
+  try {
+    const raw = localStorage.getItem('scroll_' + chapterId) || sessionStorage.getItem('scroll_' + chapterId);
+    savedScroll = parseInt(raw || '0', 10) || 0;
+  } catch (e) {}
+  if (prog && String(prog.chapterId) === String(chapterId) && prog.scrollY > 0) savedScroll = prog.scrollY;
+  if (savedScroll > 0) {
+    setTimeout(() => window.scrollTo(0, savedScroll), 50);
+  } else if (prog && String(prog.chapterId) === String(chapterId) && (prog.paraIdx > 0 || prog.charOffset > 0)) {
+    // Coming from page mode: scrollY is 0 — restore via paragraph anchor
+    setTimeout(() => {
+      const el = document.querySelector(`#readerContent .para-wrap[data-para-idx="${prog.paraIdx || 0}"]`);
+      if (el) el.scrollIntoView({ block: 'start' });
+      else window.scrollTo(0, 0);
+      updateProgress();
+    }, 50);
+  } else {
+    window.scrollTo(0, 0);
+  }
   setTimeout(updateProgress, 100);
   preloadAdjacent(bid, idx);
   setupScrollAutoNext(bid, idx);
   setupScrollToolbarAutoHide();
+  setupScrollProgressSave(bid, idx, chapterId, chapterTitle, total);
   setupScrollSwipe(bid, idx, total);
   loadParaCommentCounts(chapterId);
   refreshIcons(app);
+}
+
+function setupScrollProgressSave(bid, idx, chapterId, chapterTitle, total) {
+  if (_scrollProgressTimer) clearTimeout(_scrollProgressTimer);
+  const onScrollSave = () => {
+    clearTimeout(_scrollProgressTimer);
+    _scrollProgressTimer = setTimeout(() => {
+      if (currentBookId !== bid) return;
+      const offset = { scrollY: window.scrollY, paraIdx: 0, charOffset: 0 };
+      // Prefer the first visible paragraph as anchor for cross-mode resume
+      const wraps = document.querySelectorAll('#readerContent .para-wrap[data-para-idx]');
+      for (const wrap of wraps) {
+        const rect = wrap.getBoundingClientRect();
+        if (rect.bottom > 80) {
+          offset.paraIdx = parseInt(wrap.dataset.paraIdx, 10) || 0;
+          break;
+        }
+      }
+      saveReaderProgress(bid, currentChapterIdx, cache.detail[bid].chapters[currentChapterIdx].ChapterID,
+        cache.detail[bid].chapters[currentChapterIdx].Name || chapterTitle, total, offset);
+    }, 600);
+  };
+  window.removeEventListener('scroll', window._scrollProgressOnScroll);
+  window._scrollProgressOnScroll = onScrollSave;
+  window.addEventListener('scroll', onScrollSave, { passive: true });
 }
 
 function setupScrollAutoNext(bid, idx) {
@@ -186,14 +266,16 @@ function setupScrollAutoNext(bid, idx) {
           div.innerHTML = `<div class="auto-next-chapter"><div class="reader-title">${escapeHtml(d.chapters[nextIdx].Name||'第'+(nextIdx+1)+'章')}</div>` + renderParas(nc.paragraphs, nc.authorSpeak) + `<div class="chapter-end">本章已读完</div></div>`;
           content.appendChild(div);
           appendedChapters++;
+          currentChapterIdx = nextIdx;
+          currentChapterKey = nextChapterId;
           loadParaCommentCounts(nextChapterId);
-          const data = loadData();
-          data.readingHistory.chapterIdx = nextIdx;
-          data.readingHistory.chapterName = d.chapters[nextIdx].Name || `第${nextIdx+1}章`;
-          saveReadingHistory(data.readingHistory);
-          if (!data.stats.readSet) data.stats.readSet = [];
-          const nsid = String(nextChapterId);
-          if (!data.stats.readSet.includes(nsid)) { data.stats.readSet.push(nsid); data.stats.chaptersRead = data.stats.readSet.length; saveStats(data.stats); }
+          const nextTitle = d.chapters[nextIdx].Name || `第${nextIdx+1}章`;
+          saveReaderProgress(bid, nextIdx, nextChapterId, nextTitle, d.chapters.length, { scrollY: window.scrollY, paraIdx: 0, charOffset: 0 });
+          const headerName = document.querySelector('.scroll-reader .chapter-name');
+          if (headerName) headerName.textContent = nextTitle;
+          // Keep hash in sync so mode switch / refresh resumes the appended chapter
+          const newHash = `reader?book_id=${bid}&chapter_idx=${nextIdx}`;
+          if (location.hash.slice(1) !== newHash) history.replaceState(null, '', '#' + newHash);
         }
       }
       if (indicator) indicator.classList.add('hidden');
@@ -351,22 +433,48 @@ function renderPageReader(app, bid, idx) {
   document.documentElement.style.setProperty('--reader-line-height', getLineHeight());
   applyFont();
 
-  requestAnimationFrame(() => { requestAnimationFrame(() => { pgCalculatePages(); loadParaCommentCounts(d.chapters[idx].ChapterID); }); });
+  requestAnimationFrame(() => { requestAnimationFrame(() => {
+    const prog = getBookProgress(bid);
+    let restore = { paraIdx: 0, charOffset: 0, pageRatio: 0 };
+    if (prog && String(prog.chapterId) === String(chapterId)) {
+      restore = {
+        paraIdx: prog.paraIdx || 0,
+        charOffset: prog.charOffset || 0,
+        pageRatio: prog.pageRatio != null ? prog.pageRatio : 0,
+      };
+    }
+    pgCalculatePages(restore);
+    loadParaCommentCounts(chapterId);
+  }); });
   setupPgGestures();
   preloadAdjacent(bid, idx);
   refreshIcons(app);
 }
 
 // ====== Page calculation ======
-function pgCalculatePages() {
+function _parseParaPiece(ph) {
+  // Matches para-wrap with optional data-* attrs and optional badge span
+  const m = ph.match(/^<div class="para-wrap" data-para-idx="(\d+)"[^>]*><p>([\s\S]*?)(?:<span class="para-badge"[\s\S]*?<\/span>)?<\/p><\/div>$/);
+  if (!m) return null;
+  return { paraIdx: parseInt(m[1], 10), text: m[2] };
+}
+
+function _pieceHtml(paraIdx, text, charOffset, withBadge) {
+  const badge = withBadge
+    ? `<span class="para-badge" data-para-idx="${paraIdx}" onclick="event.stopPropagation();openParaComment(${paraIdx})"></span>`
+    : '';
+  return `<div class="para-wrap" data-para-idx="${paraIdx}" data-char-offset="${charOffset}"><p>${text}${badge}</p></div>`;
+}
+
+function pgCalculatePages(restoreOffset) {
   const container = $('pageContainer');
   const viewport = $('pageViewport');
   if (!container || !viewport) return;
-  
+
   const cw = container.clientWidth;
   const ch = container.clientHeight;
   if (cw <= 0 || ch <= 0) return;
-  
+
   const bid = pg.bid;
   const idx = pg.idx;
   const d = cache.detail[bid];
@@ -374,118 +482,151 @@ function pgCalculatePages() {
   const chapterId = d.chapters[idx].ChapterID;
   const c = getContentCache(chapterId);
   if (!c) return;
-  
+
+  // Capture position before rebuild unless caller provided an explicit restore target
+  const keep = restoreOffset || capturePageOffset();
+
   const paras = c.paragraphs;
   const authorSpeak = c.authorSpeak;
-  
-  // Build paragraph HTML array
+
   const paraHtmls = [];
+  const paraMeta = [];
   for (let pi = 0; pi < paras.length; pi++) {
     const text = paras[pi];
     if (!text) continue;
     const imgMatch = text.match(/^https?:\/\/\S+\.(jpg|jpeg|png|webp|gif)(\?\S*)?$/i);
-    if (imgMatch) { paraHtmls.push(`<img class="content-img" src="${safeImgUrl(text)}">`); continue; }
+    if (imgMatch) {
+      paraHtmls.push(`<img class="content-img" src="${safeImgUrl(text)}">`);
+      paraMeta.push({ paraIdx: pi, charOffset: 0 });
+      continue;
+    }
     const innerImgs = text.match(/<img[^>]+src="([^"]+)"[^>]*>/gi);
-    if (innerImgs) { innerImgs.forEach(imgTag => { const src = imgTag.match(/src="([^"]+)"/); if (src) paraHtmls.push(`<img class="content-img" src="${safeImgUrl(src[1])}">`); }); continue; }
-    paraHtmls.push(`<div class="para-wrap" data-para-idx="${pi}"><p>${escapeHtml(text)}<span class="para-badge" data-para-idx="${pi}" onclick="event.stopPropagation();openParaComment(${pi})"></span></p></div>`);
+    if (innerImgs) {
+      innerImgs.forEach(imgTag => {
+        const src = imgTag.match(/src="([^"]+)"/);
+        if (src) {
+          paraHtmls.push(`<img class="content-img" src="${safeImgUrl(src[1])}">`);
+          paraMeta.push({ paraIdx: pi, charOffset: 0 });
+        }
+      });
+      continue;
+    }
+    paraHtmls.push(_pieceHtml(pi, escapeHtml(text), 0, true));
+    paraMeta.push({ paraIdx: pi, charOffset: 0 });
   }
-  if (authorSpeak) paraHtmls.push(`<div class="author-speak"><i data-lucide="message-circle" width="14" height="14"></i> 作者说：${escapeHtml(authorSpeak)}</div>`);
-  
-  // Use a real .page-page element as measurer to guarantee layout consistency.
+  if (authorSpeak) {
+    paraHtmls.push(`<div class="author-speak"><i data-lucide="message-circle" width="14" height="14"></i> 作者说：${escapeHtml(authorSpeak)}</div>`);
+    paraMeta.push({ paraIdx: paras.length, charOffset: 0 });
+  }
+
   const measurer = document.createElement('div');
   measurer.className = 'page-page';
   measurer.style.cssText = 'position:fixed;visibility:hidden;left:-9999px;top:0;width:' + cw + 'px;height:' + ch + 'px;inset:auto;overflow:hidden;';
-  // Attach inside the reader so CSS variables are available
   const reader = $('paginatedReader');
   if (reader) reader.appendChild(measurer);
   else document.body.appendChild(measurer);
-  
-  // With border-box + explicit height + overflow:hidden:
-  //   clientHeight = height = ch (no border)
-  //   scrollHeight = max(clientHeight, content_height + paddingTop + paddingBottom)
-  // When scrollHeight > clientHeight, content overflows the visible area.
-  // But we want to use the *content area* height (excluding padding) as threshold,
-  // because .page-page padding pushes content inward from the edges.
-  // scrollHeight > clientHeight means content+padding > ch, which is correct
-  // since padding is part of the page and content must fit inside it.
-  // The issue is scrollHeight already includes padding, so the comparison
-  // scrollHeight vs clientHeight correctly detects overflow when content
-  // pushes beyond the padded area.
-  
-  // Split paragraphs into pages
-  // scrollHeight includes padding, but we want to compare pure content height
-  // against pure content area (clientHeight - padding).
-  // Equivalent: scrollHeight - padTotal > clientHeight - padTotal
-  // Simplifies to: scrollHeight > clientHeight (same as before)
-  // BUT the issue is scrollHeight = max(clientHeight, content+padding),
-  // so when content+padding <= clientHeight, scrollHeight = clientHeight (no overflow detected)
-  // even though content could still fit more paragraphs.
-  // Fix: use scrollHeight of inner content by temporarily removing padding from comparison.
+
   const cs = getComputedStyle(measurer);
   const padTotal = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
   const maxH = measurer.clientHeight - padTotal;
   const pages = [];
+  const pagesMeta = [];
   let currentPage = '';
-  
-  for (const ph of paraHtmls) {
-    measurer.innerHTML = currentPage + ph;
-    if ((measurer.scrollHeight - padTotal) > maxH) {
-      // Adding ph overflows. Try to split ph's text to fill current page.
-      const pMatch = ph.match(/^(<div class="para-wrap"><p>)([\s\S]*?)(<\/p><\/div>)$/);
-      if (pMatch && pMatch[2].length > 1) {
-        // Binary search for max characters that fit on current page
-        const [prefix, text, suffix] = [pMatch[1], pMatch[2], pMatch[3]];
-        let lo = 0, hi = text.length, best = 0;
-        while (lo <= hi) {
-          const mid = Math.floor((lo + hi) / 2);
-          measurer.innerHTML = currentPage + prefix + text.substring(0, mid) + suffix;
-          if ((measurer.scrollHeight - padTotal) <= maxH) { best = mid; lo = mid + 1; }
-          else hi = mid - 1;
-        }
-        if (best > 0) {
-          currentPage += prefix + text.substring(0, best) + suffix;
-          pages.push(currentPage);
-          currentPage = prefix + text.substring(best) + suffix;
-          measurer.innerHTML = currentPage;
-        } else {
-          // Can't fit even one char — push whole paragraph to next page
-          if (currentPage) { pages.push(currentPage); }
-          currentPage = ph;
-          measurer.innerHTML = currentPage;
-        }
-      } else {
-        // Image or unsplittable element
-        if (currentPage) { pages.push(currentPage); }
-        currentPage = ph;
-        measurer.innerHTML = currentPage;
+  let currentMeta = null;
+
+  const overflows = (html) => {
+    measurer.innerHTML = html;
+    return (measurer.scrollHeight - padTotal) > maxH;
+  };
+
+  const pushPage = () => {
+    if (!currentPage) return;
+    pages.push(currentPage);
+    pagesMeta.push(currentMeta || { paraIdx: 0, charOffset: 0 });
+    currentPage = '';
+    currentMeta = null;
+  };
+
+  const appendSplittable = (paraIdx, fullText, startOffset) => {
+    let remaining = fullText;
+    let offset = startOffset;
+    let firstChunk = true;
+    while (remaining.length > 0) {
+      const candidate = currentPage + _pieceHtml(paraIdx, remaining, offset, firstChunk);
+      if (!overflows(candidate)) {
+        if (!currentMeta) currentMeta = { paraIdx, charOffset: offset };
+        currentPage = candidate;
+        return;
       }
+      let lo = 0, hi = remaining.length, best = 0;
+      while (lo <= hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        const trial = currentPage + _pieceHtml(paraIdx, remaining.substring(0, mid), offset, firstChunk && mid > 0);
+        if (!overflows(trial) && mid > 0) { best = mid; lo = mid + 1; }
+        else hi = mid - 1;
+      }
+      if (best > 0) {
+        if (!currentMeta) currentMeta = { paraIdx, charOffset: offset };
+        currentPage += _pieceHtml(paraIdx, remaining.substring(0, best), offset, firstChunk);
+        pushPage();
+        remaining = remaining.substring(best);
+        offset += best;
+        firstChunk = false;
+      } else if (currentPage) {
+        pushPage();
+      } else {
+        currentMeta = { paraIdx, charOffset: offset };
+        currentPage = _pieceHtml(paraIdx, remaining.substring(0, 1), offset, firstChunk);
+        pushPage();
+        remaining = remaining.substring(1);
+        offset += 1;
+        firstChunk = false;
+      }
+    }
+  };
+
+  for (let i = 0; i < paraHtmls.length; i++) {
+    const ph = paraHtmls[i];
+    const meta = paraMeta[i];
+    const parsed = _parseParaPiece(ph);
+    if (parsed) {
+      appendSplittable(parsed.paraIdx, parsed.text, 0);
+      continue;
+    }
+    const candidate = currentPage + ph;
+    if (overflows(candidate)) {
+      pushPage();
+      if (!currentMeta) currentMeta = meta;
+      currentPage = ph;
     } else {
-      currentPage += ph;
+      if (!currentMeta) currentMeta = meta;
+      currentPage = candidate;
     }
   }
-  if (currentPage) pages.push(currentPage);
-  
-  // Cleanup measurer
+  pushPage();
+
   if (measurer.parentNode) measurer.parentNode.removeChild(measurer);
-  
-  if (pages.length === 0) pages.push('');
-  
-  // Store pages in state
+  if (pages.length === 0) {
+    pages.push('');
+    pagesMeta.push({ paraIdx: 0, charOffset: 0 });
+  }
+
   pg.pages = pages;
+  pg.pagesMeta = pagesMeta;
   pg.totalPages = pages.length;
-  pg.curPage = 0;
-  
-  // Render pages into viewport
+  const targetPage = findPageForOffset(keep.paraIdx || 0, keep.charOffset || 0, keep.pageRatio);
+  pg.curPage = Math.max(0, Math.min(targetPage, pages.length - 1));
+
   viewport.innerHTML = '';
   pages.forEach((html, i) => {
     const div = document.createElement('div');
     div.className = 'page-page';
     div.dataset.page = i;
     div.innerHTML = html;
-    div.style.display = i === 0 ? '' : 'none';
+    div.style.display = i === pg.curPage ? '' : 'none';
     viewport.appendChild(div);
   });
-  
+
   pgUpdateUI();
 }
 
@@ -498,6 +639,15 @@ function pgUpdateUI() {
   if (pct) pct.textContent = pg.totalPages > 1 ? Math.round(pg.curPage/(pg.totalPages-1)*100)+'%' : '0%';
   if (slider) { slider.max = pg.totalPages; slider.value = pg.curPage + 1; }
   if (sliderLabel) sliderLabel.textContent = `${pg.curPage+1}/${pg.totalPages}`;
+  // Persist chapter-internal offset (debounced via cloud queue; local write is cheap)
+  if (pg.bid && cache.detail[pg.bid]) {
+    const d = cache.detail[pg.bid];
+    const ch = d.chapters[pg.idx];
+    if (ch) {
+      const offset = capturePageOffset();
+      saveReaderProgress(pg.bid, pg.idx, ch.ChapterID, ch.Name || `第${pg.idx+1}章`, pg.total, offset);
+    }
+  }
 }
 
 // ====== Page navigation ======
@@ -926,14 +1076,18 @@ window.addEventListener('reader-settings-change', () => {
 
 // ====== Resize handling ======
 let pgResizeTimer = 0;
-window.addEventListener('resize', () => {
+function _onReaderViewportChange() {
   if (getReadMode() === 'scroll' || !$('pageViewport')) return;
   clearTimeout(pgResizeTimer);
   pgResizeTimer = setTimeout(() => {
-    pgCalculatePages();
+    pgCalculatePages(); // capturePageOffset inside preserves position
     applyParaCommentCounts();
   }, 200);
-});
+}
+window.addEventListener('resize', _onReaderViewportChange);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', _onReaderViewportChange);
+}
 
 // ====== Paragraph comments ======
 let _paraCommentCounts = {};

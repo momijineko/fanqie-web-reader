@@ -403,9 +403,10 @@ function _renderLocalShelf(shelf, rh) {
   for (const item of items) {
     if (item.type === 'book') {
       const b = item.data;
-      const sp = rh && rh.bookId === b.bookId && rh.totalChapters > 0 ? Math.round((rh.chapterIdx+1)/rh.totalChapters*100) : 0;
+      const bp = getBookProgress(b.bookId);
+      const sp = bp && bp.totalChapters > 0 ? Math.round((bp.chapterIdx+1)/bp.totalChapters*100) : 0;
       const badgeHtml = _localBadge(b.bookId);
-      html += `<div class="shelf-grid-item" onclick="navigate('detail?book_id=${b.bookId}')" data-book-id="${b.bookId}" data-name="${escapeHtml(b.name||'')}"><div class="cover-wrap">${badgeHtml}<img src="${b.thumb||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"></div><div class="name">${escapeHtml(b.name||'')}</div>${sp?`<div class="progress-text">读到第${rh.chapterIdx+1}章 · ${sp}%</div>`:'<div class="progress-text">&nbsp;</div>'}</div>`;
+      html += `<div class="shelf-grid-item" onclick="navigate('detail?book_id=${b.bookId}')" data-book-id="${b.bookId}" data-name="${escapeHtml(b.name||'')}"><div class="cover-wrap">${badgeHtml}<img src="${b.thumb||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"></div><div class="name">${escapeHtml(b.name||'')}</div>${sp?`<div class="progress-text">读到第${(bp.chapterIdx||0)+1}章 · ${sp}%</div>`:'<div class="progress-text">&nbsp;</div>'}</div>`;
     } else {
       const gid = item.gid, g = item.g;
       const previews = g.books.slice(0, 4);
@@ -440,9 +441,9 @@ function _openLocalFolder(gid) {
   if (!g) return;
   let booksHtml = '';
   for (const b of g.books) {
-    const rh = loadData().readingHistory;
-    const sp = rh && rh.bookId === b.bookId && rh.totalChapters > 0 ? Math.round((rh.chapterIdx+1)/rh.totalChapters*100) : 0;
-    booksHtml += `<div class="shelf-grid-item" onclick="closeShelfFolder();navigate('detail?book_id=${b.bookId}')" data-name="${escapeHtml(b.name||'')}"><div class="cover-wrap"><img src="${b.thumb||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"></div><div class="name">${escapeHtml(b.name||'')}</div>${sp?`<div class="progress-text">读到第${rh.chapterIdx+1}章 · ${sp}%</div>`:'<div class="progress-text">&nbsp;</div>'}</div>`;
+    const bp = getBookProgress(b.bookId);
+    const sp = bp && bp.totalChapters > 0 ? Math.round((bp.chapterIdx+1)/bp.totalChapters*100) : 0;
+    booksHtml += `<div class="shelf-grid-item" onclick="closeShelfFolder();navigate('detail?book_id=${b.bookId}')" data-name="${escapeHtml(b.name||'')}"><div class="cover-wrap"><img src="${b.thumb||FALLBACK_IMG}" loading="lazy" onerror="this.src='${FALLBACK_IMG}'"></div><div class="name">${escapeHtml(b.name||'')}</div>${sp?`<div class="progress-text">读到第${(bp.chapterIdx||0)+1}章 · ${sp}%</div>`:'<div class="progress-text">&nbsp;</div>'}</div>`;
   }
   const overlay = document.createElement('div');
   overlay.className = 'shelf-folder-overlay';
@@ -812,6 +813,7 @@ function _syncCloudProgress() {
     }
     const cloudTs = b.LastReadTime * 1000;
     if (!local || local.fromCloud || cloudTs > (local.updatedAt || 0)) {
+      const sameChapter = local && String(local.chapterId) === String(cloudItemId);
       all[b.BookID] = {
         chapterIdx: cloudIdx,
         chapterId: cloudItemId,
@@ -819,6 +821,11 @@ function _syncCloudProgress() {
         totalChapters: b.ChapterCount || 0,
         updatedAt: cloudTs,
         fromCloud: true,
+        // Keep local chapter-internal offset when cloud reports the same chapter
+        paraIdx: sameChapter ? (local.paraIdx || 0) : 0,
+        charOffset: sameChapter ? (local.charOffset || 0) : 0,
+        scrollY: sameChapter ? local.scrollY : undefined,
+        pageRatio: sameChapter ? local.pageRatio : undefined,
       };
     }
   }
@@ -1030,17 +1037,35 @@ function renderDetail(app, bid) {
   const chapters = d.chapters;
   const inShelf = isInShelf(bid);
   const data = loadData();
-  const localIdx = data.readingHistory && data.readingHistory.bookId === bid ? data.readingHistory.chapterIdx : -1;
-  const localName = data.readingHistory && data.readingHistory.bookId === bid ? data.readingHistory.chapterName : '';
+  const rh = data.readingHistory && data.readingHistory.bookId === bid ? data.readingHistory : null;
+  const localIdx = rh ? rh.chapterIdx : -1;
+  const localName = rh ? rh.chapterName : '';
+  const localTs = rh ? (Number(rh.updatedAt) || 0) : 0;
   const bookProg = getBookProgress(bid);
-  let cloudIdx = -1;
+  let progIdx = -1;
   if (bookProg && bookProg.chapterId) {
-    cloudIdx = chapters.findIndex(ch => String(ch.ChapterID) === String(bookProg.chapterId));
+    progIdx = chapters.findIndex(ch => String(ch.ChapterID) === String(bookProg.chapterId));
   }
-  if (cloudIdx < 0 && bookProg) cloudIdx = bookProg.chapterIdx;
-  const useCloud = bookProg && cloudIdx >= 0 && (localIdx < 0 || cloudIdx > localIdx);
-  const resumeIdx = Math.max(localIdx, cloudIdx >= 0 ? cloudIdx : -1);
-  const resumeChapterName = useCloud ? (bookProg.chapterTitle || (chapters[resumeIdx] ? chapters[resumeIdx].Name : '')) : localName;
+  if (progIdx < 0 && bookProg && bookProg.chapterIdx >= 0) progIdx = bookProg.chapterIdx;
+  const progTs = bookProg ? (Number(bookProg.updatedAt) || 0) : 0;
+  // Prefer newer progress by timestamp (not max chapter index) so re-reading earlier chapters sticks
+  let resumeIdx = -1;
+  let resumeChapterName = '';
+  if (progIdx >= 0 && localIdx >= 0) {
+    if (progTs >= localTs) {
+      resumeIdx = progIdx;
+      resumeChapterName = bookProg.chapterTitle || (chapters[progIdx] ? chapters[progIdx].Name : '') || localName;
+    } else {
+      resumeIdx = localIdx;
+      resumeChapterName = localName;
+    }
+  } else if (progIdx >= 0) {
+    resumeIdx = progIdx;
+    resumeChapterName = bookProg.chapterTitle || (chapters[progIdx] ? chapters[progIdx].Name : '');
+  } else if (localIdx >= 0) {
+    resumeIdx = localIdx;
+    resumeChapterName = localName;
+  }
   const resumeLabel = resumeIdx >= 0 ? `继续阅读 · ${escapeHtml(resumeChapterName || ('第'+(resumeIdx+1)+'章'))}` : '开始阅读';
   $('pageTitle').textContent = d.bookName || '书籍详情';
 

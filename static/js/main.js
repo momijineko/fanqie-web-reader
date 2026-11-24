@@ -41,7 +41,21 @@ function router() {
   if (queryStr) new URLSearchParams(queryStr).forEach((v,k) => query[k] = v);
 
   if (currentChapterKey && !path.startsWith('reader')) {
-    sessionStorage.setItem('scroll_' + currentChapterKey, window.scrollY);
+    try {
+      sessionStorage.setItem('scroll_' + currentChapterKey, window.scrollY);
+      localStorage.setItem('scroll_' + currentChapterKey, String(window.scrollY));
+    } catch (e) {}
+    if (currentBookId && cache.detail[currentBookId]) {
+      const d = cache.detail[currentBookId];
+      const ch = d.chapters[currentChapterIdx];
+      if (ch) {
+        saveReaderProgress(currentBookId, currentChapterIdx, ch.ChapterID, ch.Name || '', d.chapters.length, {
+          scrollY: window.scrollY,
+          paraIdx: 0,
+          charOffset: 0,
+        });
+      }
+    }
     currentChapterKey = null;
   }
   if (!path.startsWith('reader')) { appendedChapters = 0; }

@@ -137,14 +137,16 @@
   overflow: hidden;
 }
 
-/* Single page styling */
+/* Single page styling — side padding centers the column on large screens
+   (avoid transform here: page-turn animations own translateX) */
 .page-page {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 12px 24px;
+  padding: 12px max(14px, calc((100% - 680px) / 2));
+  box-sizing: border-box;
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--reader-bg);
@@ -153,6 +155,9 @@
   line-height: var(--reader-line-height, 1.85);
   color: var(--reader-text);
   letter-spacing: 0.02em;
+}
+@media (max-width: 480px) {
+  .page-page { padding: 10px 14px; }
 }
 .page-page p { text-indent: 2em; margin-bottom: 0.8em; }
 .page-page p:last-child { margin-bottom: 0; }

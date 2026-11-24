@@ -366,9 +366,83 @@ function getBookProgress(bookId) {
 }
 function saveBookProgress(bookId, progress) {
   const all = JSON.parse(localStorage.getItem('bookProgress') || '{}');
-  all[bookId] = progress;
+  const prev = all[bookId] || {};
+  all[bookId] = Object.assign({}, prev, progress, { fromCloud: false });
   localStorage.setItem('bookProgress', JSON.stringify(all));
 }
+
+// Cloud progress: debounce uploads + retry on failure / page hide
+let _pendingCloudProgress = null;
+let _cloudProgressTimer = 0;
+const _CLOUD_PROGRESS_RETRY_KEY = 'progressRetryQueue';
+
+function queueCloudProgress(bookId, chapterId, chapterIdx) {
+  if (typeof _profileUser === 'undefined' || !_profileUser) return;
+  _pendingCloudProgress = { book_id: String(bookId), item_id: String(chapterId), index: chapterIdx };
+  clearTimeout(_cloudProgressTimer);
+  _cloudProgressTimer = setTimeout(flushCloudProgress, 800);
+}
+
+function _loadProgressRetryQueue() {
+  try { return JSON.parse(localStorage.getItem(_CLOUD_PROGRESS_RETRY_KEY) || '[]'); } catch (e) { return []; }
+}
+function _saveProgressRetryQueue(q) {
+  localStorage.setItem(_CLOUD_PROGRESS_RETRY_KEY, JSON.stringify(q.slice(-20)));
+}
+
+async function flushCloudProgress() {
+  clearTimeout(_cloudProgressTimer);
+  const payload = _pendingCloudProgress;
+  _pendingCloudProgress = null;
+  if (!payload) return;
+  if (typeof _profileUser === 'undefined' || !_profileUser) return;
+  try {
+    const r = await fetch(`${API}/api/user/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || data.code !== 200) throw new Error(data.msg || 'progress sync failed');
+  } catch (e) {
+    const q = _loadProgressRetryQueue();
+    const last = q[q.length - 1];
+    if (!last || last.book_id !== payload.book_id || last.item_id !== payload.item_id || last.index !== payload.index) {
+      q.push(payload);
+      _saveProgressRetryQueue(q);
+    }
+  }
+}
+
+async function retryCloudProgressQueue() {
+  if (typeof _profileUser === 'undefined' || !_profileUser) return;
+  const q = _loadProgressRetryQueue();
+  if (!q.length) return;
+  const remaining = [];
+  for (const payload of q) {
+    try {
+      const r = await fetch(`${API}/api/user/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || data.code !== 200) remaining.push(payload);
+    } catch (e) {
+      remaining.push(payload);
+    }
+  }
+  _saveProgressRetryQueue(remaining);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    flushCloudProgress();
+  } else {
+    retryCloudProgressQueue();
+  }
+});
+window.addEventListener('pagehide', () => { flushCloudProgress(); });
 
 function isInShelf(bookId) {
   if (typeof _profileUser !== 'undefined' && _profileUser) return _onlineShelf.some(b => b.BookID === bookId);
