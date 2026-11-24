@@ -19,11 +19,14 @@ services:
       - fqapi-data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:18921/healthz"]
-      interval: 30s
+      # /readyz waits for the device pool; /healthz alone can mark the
+      # container healthy before signed APIs work, and depends_on would
+      # start the web reader too early.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:18921/readyz"]
+      interval: 10s
       timeout: 3s
-      start_period: 40s
-      retries: 3
+      start_period: 60s
+      retries: 6
 
   fanqie-web-reader:
     build:
