@@ -58,6 +58,7 @@ def test_paragraph_comments_calls_fqapi_with_channel_9(client):
     body = response.json()
     assert body["code"] == 200
     assert body["data"][0]["content"] == "渝川好评"
+    assert body["data"][0]["digg_count"] == 1
     mock_fq.assert_awaited_once()
     path, kwargs = mock_fq.await_args.args[0], mock_fq.await_args.kwargs
     assert path.endswith("/reviews")

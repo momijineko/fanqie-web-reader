@@ -399,12 +399,26 @@ def _normalize_comments(raw) -> list:
         if not text:
             text = item.get("text") or item.get("content") or item.get("comment_text") or item.get("reply_text") or ""
 
-        digg_count = (
-            item.get("digg_count") or item.get("like_count") or item.get("digg") or 0
-        )
-        stat = common.get("digg_count") or common.get("like_count")
-        if stat:
-            digg_count = stat
+        digg_count = 0
+        for src in (
+            item.get("digg_count"),
+            item.get("like_count"),
+            item.get("digg"),
+            common.get("digg_count"),
+            common.get("like_count"),
+            (comment_obj.get("stat") or {}).get("digg_count")
+            if isinstance(comment_obj, dict)
+            else None,
+            (comment_obj.get("stat") or {}).get("like_count")
+            if isinstance(comment_obj, dict)
+            else None,
+            (item.get("stat") or {}).get("digg_count")
+            if isinstance(item.get("stat"), dict)
+            else None,
+        ):
+            if isinstance(src, (int, float)) and src > 0:
+                digg_count = int(src)
+                break
 
         ts = 0
         for tsrc in [
