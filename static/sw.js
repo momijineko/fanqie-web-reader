@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fanqie-25';
+const CACHE_NAME = 'fanqie-26';
 const IMG_CACHE = 'fanqie-imgs';
 const STATIC_ASSETS = [
   '/',
@@ -37,11 +37,20 @@ self.addEventListener('activate', e => {
     const stale = keys.filter(k => k !== CACHE_NAME && k !== IMG_CACHE);
     await Promise.all(stale.map(k => caches.delete(k)));
     await self.clients.claim();
-    // Notify open tabs — page decides whether to reload (avoid double navigate+reload)
+    // Cache version bumped → force open tabs onto new assets.
+    // Prefer navigate so tabs still on the *previous* page script also reload;
+    // the page no longer auto-reloads on controllerchange (avoids double refresh).
     if (stale.length) {
       const clients = await self.clients.matchAll({ type: 'window' });
       for (let i = 0; i < clients.length; i++) {
-        try { clients[i].postMessage({ type: 'SW_UPDATED' }); } catch (err) {}
+        const c = clients[i];
+        if (typeof c.navigate === 'function') {
+          try { c.navigate(c.url); } catch (err) {
+            try { c.postMessage({ type: 'SW_UPDATED' }); } catch (e2) {}
+          }
+        } else {
+          try { c.postMessage({ type: 'SW_UPDATED' }); } catch (err) {}
+        }
       }
     }
   })());

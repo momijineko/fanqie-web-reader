@@ -963,12 +963,9 @@ async function refreshAppResources(opts) {
     if (!confirm('确认刷新应用资源？将清除页面与图片缓存并重新加载，书架与阅读进度会保留。')) return;
   }
   showToast('正在刷新资源…');
-  let ver = opts.version || '';
-  if (!ver) {
-    try { ver = await fetchRemoteVersion(); } catch (e) {}
-  }
-  if (ver) {
-    try { localStorage.setItem(APP_VERSION_KEY, ver); } catch (e) {}
+  // Never block refresh on /api/version — use caller-provided version only
+  if (opts.version) {
+    try { localStorage.setItem(APP_VERSION_KEY, opts.version); } catch (e) {}
     try { sessionStorage.removeItem(APP_UPDATE_SNOOZE_KEY); } catch (e) {}
   }
   try { await clearResourceCaches(); } catch (e) {}
@@ -1051,8 +1048,9 @@ async function checkAppUpdate(opts) {
   if (_updateCheckInflight) {
     const result = await _updateCheckInflight;
     _toastUpdateResult(result, opts.fromUser);
-    if (opts.autoApply && result && result.outdated && result.remote) {
-      await refreshAppResources({ silent: true, version: result.remote });
+    if (result && result.outdated && result.remote) {
+      if (opts.autoApply) await refreshAppResources({ silent: true, version: result.remote });
+      else showUpdateBanner(result.remote, !!opts.fromUser);
     }
     return !!(result && result.outdated);
   }
@@ -1124,15 +1122,10 @@ function setupServiceWorkerUpdates() {
     if (data.type === 'SW_UPDATED') checkAppUpdate();
   });
 
+  // Do not auto-reload on controllerchange — SW activate navigates when the
+  // cache version bumps; otherwise version check / banner handles the prompt.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (_swRefreshing) return;
-    if (!hadController) {
-      hadController = true;
-      return;
-    }
-    _swRefreshing = true;
-    // Updated SW took control after skipWaiting — reload to pick up assets
-    location.reload();
+    if (!hadController) hadController = true;
   });
 }
 
