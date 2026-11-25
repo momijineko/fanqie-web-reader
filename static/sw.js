@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fanqie-23';
+const CACHE_NAME = 'fanqie-24';
 const IMG_CACHE = 'fanqie-imgs';
 const STATIC_ASSETS = [
   '/',
@@ -130,11 +130,14 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Static assets: stale-while-revalidate — serve cache instantly, refresh in background
+  // Static assets: stale-while-revalidate — serve cache instantly, refresh in background.
+  // cache: 'reload' bypasses the browser HTTP cache so a deploy that didn't
+  // touch sw.js still revalidates JS/CSS with fresh bytes (not heuristic-stale).
   e.respondWith(
     caches.open(CACHE_NAME).then(cache =>
       cache.match(e.request).then(cached => {
-        const fetched = fetch(e.request).then(resp => {
+        const revalidate = new Request(e.request, { cache: 'reload' });
+        const fetched = fetch(revalidate).then(resp => {
           if (resp && resp.ok) cache.put(e.request, resp.clone()).catch(() => {});
           return resp;
         }).catch(() => cached);

@@ -42,3 +42,10 @@ def test_index(client):
     assert response.status_code == 200
     assert 'id="app"' in response.text
     assert "no-cache" in response.headers.get("cache-control", "")
+
+
+def test_static_js_no_cache(client):
+    response = client.get("/static/js/app.js")
+
+    assert response.status_code == 200
+    assert "no-cache" in response.headers.get("cache-control", "")
