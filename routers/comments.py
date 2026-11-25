@@ -1,4 +1,5 @@
 import hashlib
+import re
 import time
 from urllib.parse import urlparse
 
@@ -21,6 +22,69 @@ from shared import (
 # fqapi + unidbg 串行兜底合计须明显低于该值。
 _REPLY_FETCH_COUNT = 20
 _REPLY_FETCH_TIMEOUT_S = 6.0
+
+# 正文仅为 [哭][震惊]… 时，image_data_list 是表情贴图而非附图。
+_STICKER_ONLY_RE = re.compile(r"^(?:\[[^\[\]]+\])+$")
+_STICKER_NAME_RE = re.compile(r"\[([^\[\]]+)\]")
+
+
+def _is_sticker_placeholder_text(text: str) -> bool:
+    compact = "".join(str(text or "").split())
+    return bool(compact) and bool(_STICKER_ONLY_RE.match(compact))
+
+
+def _sticker_names(text: str) -> list[str]:
+    return _STICKER_NAME_RE.findall(str(text or ""))
+
+
+def _pick_image_url(img: dict, *, prefer_thumb: bool) -> str:
+    if not isinstance(img, dict):
+        return ""
+    if prefer_thumb:
+        keys = (
+            "dynamic_url",
+            "web_uri",
+            "web_url",
+            "expand_web_url",
+            "thumb_url",
+            "url",
+            "origin_url",
+        )
+    else:
+        keys = (
+            "web_url",
+            "expand_web_url",
+            "url",
+            "origin_url",
+            "web_uri",
+            "dynamic_url",
+            "thumb_url",
+        )
+    for key in keys:
+        url = img.get(key) or ""
+        if isinstance(url, str) and url.startswith("http"):
+            return url
+    return ""
+
+
+def _collect_content_image_objs(common: dict) -> list:
+    """Pull image objects from comment.common.content.image_data_list."""
+    if not isinstance(common, dict):
+        return []
+    content = common.get("content")
+    if not isinstance(content, dict):
+        return []
+    img_data = content.get("image_data_list") or {}
+    images = []
+    if isinstance(img_data, dict):
+        nested = img_data.get("image_data")
+        if isinstance(nested, list):
+            images = nested
+        elif img_data:
+            images = list(img_data.values())
+    elif isinstance(img_data, list):
+        images = img_data
+    return [img for img in images if isinstance(img, dict)]
 
 router = APIRouter()
 
@@ -397,6 +461,13 @@ def _mock_para_comments(chapter_id: str, paragraph_idx: int) -> list:
         # First comment advertises replies; bodies come from replies endpoint on expand.
         if i == 0:
             comment["reply_count"] = 2
+        # Second comment demos sticker rendering under PARA_COMMENT_MOCK.
+        if i == 1:
+            comment["content"] = "[哭]"
+            comment["stickers"] = [{
+                "url": f"https://picsum.photos/seed/sticker{paragraph_idx}/128/128",
+                "name": "哭",
+            }]
         result.append(comment)
     return result
 
@@ -409,14 +480,21 @@ def _mock_para_replies(comment_id: str) -> list:
     texts = ["同感！", "这段确实绝了", "作者伏笔埋得好"]
     out = []
     for i in range(2):
-        out.append({
+        item = {
             "user_name": users[(seed + i) % len(users)],
             "avatar_url": f"https://i.pravatar.cc/80?img={(seed + i) % 10 + 1}",
             "content": texts[(seed + i) % len(texts)],
             "create_time": now - (i + 1) * 900,
             "digg_count": (seed + i) % 12,
             "reply_to_user_name": "书虫小王" if i == 1 else "",
-        })
+        }
+        if i == 0:
+            item["content"] = "[震惊]"
+            item["stickers"] = [{
+                "url": "https://picsum.photos/seed/replysticker/96/96",
+                "name": "震惊",
+            }]
+        out.append(item)
     return out
 
 
@@ -525,6 +603,27 @@ def _normalize_reply_item(rc: dict) -> dict | None:
                 break
     if reply_to:
         out["reply_to_user_name"] = reply_to
+
+    content_imgs = _collect_content_image_objs(rc_common)
+    if content_imgs:
+        as_sticker = _is_sticker_placeholder_text(rc_text)
+        urls = []
+        for img in content_imgs:
+            url = _pick_image_url(img, prefer_thumb=as_sticker)
+            if url:
+                urls.append(_fix_img_url(url))
+        if urls:
+            if as_sticker:
+                names = _sticker_names(rc_text)
+                out["stickers"] = [
+                    {
+                        "url": url,
+                        "name": names[i] if i < len(names) else (names[0] if names else "表情"),
+                    }
+                    for i, url in enumerate(urls)
+                ]
+            else:
+                out["images"] = urls
     return out
 
 
@@ -711,38 +810,33 @@ def _normalize_comments(raw) -> list:
             comment["comment_id"] = comment_id
 
         images = item.get("image_list") or item.get("pic_list") or item.get("images") or []
-        if not images and isinstance(common.get("content"), dict):
-            img_data = common["content"].get("image_data_list") or {}
-            if isinstance(img_data, dict) and img_data:
-                images = list(img_data.values())
-            elif isinstance(img_data, list):
-                images = img_data
-            nested = common["content"].get("image_data_list")
-            if isinstance(nested, dict) and isinstance(nested.get("image_data"), list):
-                images = nested["image_data"]
+        content_imgs = _collect_content_image_objs(common)
+        if not images and content_imgs:
+            images = content_imgs
         if isinstance(images, dict):
             images = list(images.values())
         if isinstance(images, str):
             images = [images]
         if images and isinstance(images, list):
+            as_sticker = _is_sticker_placeholder_text(text)
             img_urls = []
             for img in images:
                 if isinstance(img, str) and img:
                     img_urls.append(_fix_img_url(img))
                 elif isinstance(img, dict):
-                    url = (
-                        img.get("url")
-                        or img.get("origin_url")
-                        or img.get("thumb_url")
-                        or img.get("web_url")
-                        or img.get("expand_web_url")
-                        or img.get("web_uri")
-                        or ""
-                    )
+                    url = _pick_image_url(img, prefer_thumb=as_sticker)
                     if url:
                         img_urls.append(_fix_img_url(url))
             if img_urls:
-                comment["images"] = img_urls
+                if as_sticker:
+                    names = _sticker_names(text)
+                    stickers = []
+                    for i, url in enumerate(img_urls):
+                        name = names[i] if i < len(names) else (names[0] if names else "表情")
+                        stickers.append({"url": url, "name": name})
+                    comment["stickers"] = stickers
+                else:
+                    comment["images"] = img_urls
 
         replies = (
             item.get("reply_list")
