@@ -309,7 +309,8 @@ _tryAutoLogin();
 // Retry any cloud progress that failed in a previous session (visibilitychange alone won't fire at load)
 if (_profileUser) retryCloudProgressQueue();
 
-// Service Worker
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js', {scope: '/'}).catch(() => {});
-}
+// Service Worker + proactive update detection
+setupServiceWorkerUpdates();
+checkAppUpdate();
+// Re-check periodically while the tab stays open
+setInterval(() => checkAppUpdate(), 15 * 60 * 1000);

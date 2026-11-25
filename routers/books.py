@@ -44,6 +44,9 @@ def _cache_set(key: str, value: Any) -> None:
         _cache.popitem(last=False)
 
 
+_NO_CACHE = {"Cache-Control": "no-cache, no-store, must-revalidate"}
+
+
 @router.get("/sw.js")
 async def sw_js():
     path = Path("static/sw.js")
@@ -51,24 +54,33 @@ async def sw_js():
         return FileResponse(
             path,
             media_type="application/javascript",
-            headers={"Service-Worker-Allowed": "/"},
+            headers={
+                "Service-Worker-Allowed": "/",
+                **_NO_CACHE,
+            },
         )
     return JSONResponse(status_code=404, content={"error": "not found"})
 
 
 @router.get("/api/health")
 async def health():
-    return {"status": "ok", "version": resolve_version()}
+    return JSONResponse(
+        content={"status": "ok", "version": resolve_version()},
+        headers=_NO_CACHE,
+    )
 
 
 @router.get("/api/version")
 async def version():
-    return {"version": resolve_version()}
+    return JSONResponse(
+        content={"version": resolve_version()},
+        headers=_NO_CACHE,
+    )
 
 
 @router.get("/")
 async def index():
-    return FileResponse("static/index.html")
+    return FileResponse("static/index.html", headers=_NO_CACHE)
 
 
 def _html_paragraphs(content_html: str) -> list[str]:

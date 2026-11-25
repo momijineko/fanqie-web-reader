@@ -676,6 +676,16 @@ function _settingsHtml() {
           <span class="toggle-slider"></span>
         </label>
       </div>
+      <div class="profile-setting-item" onclick="checkAppUpdate({fromUser:true})">
+        <i data-lucide="refresh-cw" width="18" height="18"></i>
+        <span>检查更新</span>
+        <i data-lucide="chevron-right" width="16" height="16" class="profile-arrow"></i>
+      </div>
+      <div class="profile-setting-item" onclick="refreshAppResources()">
+        <i data-lucide="download" width="18" height="18"></i>
+        <span>刷新资源</span>
+        <i data-lucide="chevron-right" width="16" height="16" class="profile-arrow"></i>
+      </div>
       <div class="profile-setting-item" onclick="clearAllCache()">
         <i data-lucide="trash-2" width="18" height="18"></i>
         <span>清除缓存</span>
@@ -711,12 +721,12 @@ function _aboutHtml() {
 
 function clearAllCache() {
   if (!confirm('确认清除数据缓存？本地书架、阅读进度等将被清除，但主题、字体等设置会保留。')) return;
-  const keep = ['readerTheme', 'readerLightTheme', 'readerFont', 'fontSize', 'lineHeight', 'readMode', 'shelfSort', 'debugLog'];
+  const keep = ['readerTheme', 'readerLightTheme', 'readerFont', 'fontSize', 'lineHeight', 'readMode', 'shelfSort', 'debugLog', APP_VERSION_KEY];
   const saved = {};
   for (const k of keep) { const v = localStorage.getItem(k); if (v !== null) saved[k] = v; }
   localStorage.clear();
   for (const k of keep) { if (saved[k] !== undefined) localStorage.setItem(k, saved[k]); }
-  location.reload();
+  clearResourceCaches().finally(() => location.reload());
 }
 
 let _activeFolderOverlay = null;

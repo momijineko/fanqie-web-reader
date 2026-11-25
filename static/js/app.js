@@ -920,6 +920,173 @@ function showToast(msg) {
   el._timer = setTimeout(() => el.style.opacity = '0', 2000);
 }
 
+// ---- App update detection / resource refresh ----
+const APP_VERSION_KEY = 'appKnownVersion';
+let _updateBannerShown = false;
+let _updateCheckInflight = null;
+let _swRefreshing = false;
+
+async function clearResourceCaches() {
+  if (typeof cache !== 'undefined') {
+    cache.detail = {};
+    if (cache.content && cache.content.clear) cache.content.clear();
+  }
+  if (typeof paraCommentCounts !== 'undefined') {
+    for (const k of Object.keys(paraCommentCounts)) delete paraCommentCounts[k];
+  }
+  if ('caches' in window) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    } catch (e) {}
+  }
+  if ('serviceWorker' in navigator) {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(async reg => {
+        try {
+          if (reg.active) reg.active.postMessage({ type: 'CLEAR_CACHES' });
+          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } catch (e) {}
+        try { await reg.unregister(); } catch (e) {}
+      }));
+    } catch (e) {}
+  }
+}
+
+/** Force-clear SW/static caches and reload. Keeps shelf / progress / settings. */
+async function refreshAppResources(opts) {
+  opts = opts || {};
+  if (!opts.silent) {
+    if (!confirm('确认刷新应用资源？将清除页面与图片缓存并重新加载，书架与阅读进度会保留。')) return;
+  }
+  showToast('正在刷新资源…');
+  if (opts.version) {
+    try { localStorage.setItem(APP_VERSION_KEY, opts.version); } catch (e) {}
+  }
+  try { await clearResourceCaches(); } catch (e) {}
+  const base = location.href.split('#')[0].split('?')[0];
+  const hash = location.hash || '';
+  location.replace(base + '?_r=' + Date.now() + hash);
+}
+
+function dismissUpdateBanner() {
+  _updateBannerShown = false;
+  const el = $('updateBanner');
+  if (el) el.classList.remove('show');
+}
+
+function showUpdateBanner(remoteVersion) {
+  if (_updateBannerShown) return;
+  _updateBannerShown = true;
+  let el = $('updateBanner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'updateBanner';
+    el.className = 'update-banner';
+    el.innerHTML = `<div class="update-banner-inner">
+      <i data-lucide="refresh-cw" width="18" height="18"></i>
+      <span class="update-banner-text">发现新版本，点击更新</span>
+      <button type="button" class="update-banner-btn" id="updateBannerBtn">更新</button>
+      <button type="button" class="update-banner-dismiss" id="updateBannerDismiss" aria-label="稍后"><i data-lucide="x" width="16" height="16"></i></button>
+    </div>`;
+    document.body.appendChild(el);
+    const btn = $('updateBannerBtn');
+    const dismiss = $('updateBannerDismiss');
+    if (btn) btn.addEventListener('click', () => {
+      refreshAppResources({ silent: true, version: el._remoteVersion || '' });
+    });
+    if (dismiss) dismiss.addEventListener('click', dismissUpdateBanner);
+  }
+  el._remoteVersion = remoteVersion || '';
+  el.classList.add('show');
+  refreshIcons(el);
+}
+
+/**
+ * Proactively compare /api/version with the last-known local version.
+ * opts.fromUser — show toast when already up to date / on failure
+ * opts.autoApply — skip banner and refresh immediately
+ */
+async function checkAppUpdate(opts) {
+  opts = opts || {};
+  if (_updateCheckInflight) return _updateCheckInflight;
+  _updateCheckInflight = (async () => {
+    try {
+      const r = await fetch(API + '/api/version', { cache: 'no-store' });
+      const data = await r.json();
+      const remote = (data && data.version) ? String(data.version) : '';
+      if (!remote) {
+        if (opts.fromUser) showToast('无法获取版本信息');
+        return false;
+      }
+      let local = '';
+      try { local = localStorage.getItem(APP_VERSION_KEY) || ''; } catch (e) {}
+      if (!local) {
+        try { localStorage.setItem(APP_VERSION_KEY, remote); } catch (e) {}
+        if (opts.fromUser) showToast('已是最新版本');
+        return false;
+      }
+      if (local === remote) {
+        if (opts.fromUser) showToast('已是最新版本');
+        dismissUpdateBanner();
+        return false;
+      }
+      if (opts.autoApply) {
+        await refreshAppResources({ silent: true, version: remote });
+        return true;
+      }
+      showUpdateBanner(remote);
+      if (opts.fromUser) showToast('发现新版本');
+      return true;
+    } catch (e) {
+      if (opts.fromUser) showToast('检查更新失败');
+      return false;
+    } finally {
+      _updateCheckInflight = null;
+    }
+  })();
+  return _updateCheckInflight;
+}
+
+function setupServiceWorkerUpdates() {
+  if (!('serviceWorker' in navigator)) return;
+  // First-ever SW install also fires controllerchange — skip that reload
+  let hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
+    // Periodic SW script check (browsers also check on navigation)
+    setInterval(() => { try { reg.update(); } catch (e) {} }, 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        try { reg.update(); } catch (e) {}
+        checkAppUpdate();
+      }
+    });
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          // New SW ready — prompt via version check / banner
+          checkAppUpdate();
+          showUpdateBanner('');
+        }
+      });
+    });
+  }).catch(() => {});
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_swRefreshing) return;
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
+    _swRefreshing = true;
+    // Updated SW took control after skipWaiting — reload to pick up assets
+    location.reload();
+  });
+}
+
 // ---- Skeleton ----
 
 // Generic shimmer helpers
