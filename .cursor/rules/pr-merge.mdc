@@ -1,0 +1,27 @@
+---
+description: How Cloud Agents must merge PRs in this repo (Cursor App gh, not MCP)
+alwaysApply: true
+---
+
+# PR merge workflow
+
+When asked to merge, merge yourself. Do not ask the user to click Merge.
+
+**Working path** (Cursor GitHub App via Shell `gh`):
+
+```bash
+gh api -X PUT repos/momijineko/fanqie-web-reader/pulls/<N>/merge \
+  -f merge_method=squash \
+  -f commit_title='<title> (#<N>)' \
+  -f sha=<head_sha>
+```
+
+Fallback: `gh pr merge <N> --squash --admin` (after resolving blocking review threads if needed).
+
+**Do not use for merge:**
+
+- `Github.merge_pull_request` MCP → always 403 with user PAT
+- `ManagePullRequest` → no merge action
+- Direct push to `main` → branch protection
+
+“用 Cursor 的 / 不要用 gh” means use the App `gh` token (`gh auth status` → account `cursor`), not “refuse to merge”.
