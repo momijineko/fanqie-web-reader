@@ -117,7 +117,14 @@
     }
   } catch (e) {}
 
-  // ---- scrollTo / scrollIntoView: map behavior "instant" → "auto" ----
+  // ---- scrollTo / scrollIntoView ----
+  // Chrome < 61: options objects are NOT supported (object coerced to NaN, no throw).
+  // Detect via CSS scroll-behavior (same Chrome 61 cutoff as ScrollOptions).
+  var supportsScrollOpts = false;
+  try {
+    supportsScrollOpts = 'scrollBehavior' in document.documentElement.style;
+  } catch (e) {}
+
   function normalizeScrollBehavior(opts) {
     if (!opts || typeof opts !== 'object') return opts;
     if (opts.behavior === 'instant') {
@@ -128,43 +135,68 @@
     }
     return opts;
   }
+
   var _scrollTo = window.scrollTo;
   if (typeof _scrollTo === 'function') {
     window.scrollTo = function (a, b) {
       if (typeof a === 'object' && a !== null) {
         a = normalizeScrollBehavior(a);
+        if (!supportsScrollOpts) {
+          var x = a.left != null ? a.left : (window.scrollX || window.pageXOffset || 0);
+          var y = a.top != null ? a.top : (window.scrollY || window.pageYOffset || 0);
+          return _scrollTo.call(window, x, y);
+        }
         try { return _scrollTo.call(window, a); }
         catch (e) {
-          var x = a.left != null ? a.left : window.scrollX || window.pageXOffset || 0;
-          var y = a.top != null ? a.top : window.scrollY || window.pageYOffset || 0;
-          return _scrollTo.call(window, x, y);
+          return _scrollTo.call(
+            window,
+            a.left != null ? a.left : (window.scrollX || window.pageXOffset || 0),
+            a.top != null ? a.top : (window.scrollY || window.pageYOffset || 0)
+          );
         }
       }
       return _scrollTo.call(window, a, b);
     };
   }
+
+  function applyElScroll(el, a, b) {
+    if (typeof a === 'object' && a !== null) {
+      if (a.left != null) el.scrollLeft = a.left;
+      if (a.top != null) el.scrollTop = a.top;
+      return;
+    }
+    if (a != null) el.scrollLeft = a;
+    if (b != null) el.scrollTop = b;
+  }
+
   if (Element.prototype.scrollTo) {
     var _elScrollTo = Element.prototype.scrollTo;
     Element.prototype.scrollTo = function (a, b) {
       if (typeof a === 'object' && a !== null) {
         a = normalizeScrollBehavior(a);
+        if (!supportsScrollOpts) { applyElScroll(this, a); return; }
         try { return _elScrollTo.call(this, a); }
-        catch (e) {
-          if (a.top != null) this.scrollTop = a.top;
-          if (a.left != null) this.scrollLeft = a.left;
-          return;
-        }
+        catch (e) { applyElScroll(this, a); return; }
       }
       return _elScrollTo.call(this, a, b);
     };
+  } else {
+    Element.prototype.scrollTo = function (a, b) {
+      applyElScroll(this, typeof a === 'object' && a !== null ? normalizeScrollBehavior(a) : a, b);
+    };
   }
+
   if (Element.prototype.scrollIntoView) {
     var _siv = Element.prototype.scrollIntoView;
     Element.prototype.scrollIntoView = function (arg) {
       if (typeof arg === 'object' && arg !== null) {
         arg = normalizeScrollBehavior(arg);
+        if (!supportsScrollOpts) {
+          // Pre-options API only accepts a boolean (alignToTop)
+          return _siv.call(this, arg.block !== 'end' && arg.block !== 'nearest');
+        }
         try { return _siv.call(this, arg); }
-        catch (e) { return _siv.call(this, arg.block !== 'nearest'); }
+        catch (e) { return _siv.call(this, true); }
       }
       return _siv.call(this, arg);
     };
