@@ -926,7 +926,6 @@ const APP_UPDATE_SNOOZE_KEY = 'appUpdateSnoozeVersion';
 let _updateBannerShown = false;
 let _updateCheckInflight = null;
 let _updateCheckResult = null; // last settled { outdated, remote }
-let _swRefreshing = false;
 
 async function clearResourceCaches() {
   if (typeof cache !== 'undefined') {
