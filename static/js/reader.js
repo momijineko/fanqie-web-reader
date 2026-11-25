@@ -1163,9 +1163,6 @@ function openParaComment(paraIdx) {
   if (!c) return;
   const text = c.paragraphs[paraIdx] || '';
 
-  // Show immediate feedback toast (comment API can be slow ~1-3s)
-  showToast('段评加载中...');
-
   // Create or reuse panel
   let backdrop = $('paraCommentBackdrop');
   let panel = $('paraCommentPanel');
