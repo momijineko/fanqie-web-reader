@@ -1334,7 +1334,6 @@ async function loadParaCommentList(chapterId, paraIdx, bookId) {
     container.innerHTML = html;
   } catch(e) {
     container.innerHTML = '<div class="panel-empty"><div class="panel-empty-icon">⚠️</div><div class="panel-empty-text">加载失败，请稍后重试</div></div>';
-    showToast('段评加载失败');
   }
 }
 
