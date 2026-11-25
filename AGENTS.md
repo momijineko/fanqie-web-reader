@@ -17,13 +17,9 @@ gh api -X PUT repos/momijineko/fanqie-web-reader/pulls/<N>/merge \
   -f sha=<head_sha>
 ```
 
-Fallback when branch policy / unresolved conversations block a normal merge:
+If conversations block the merge, **resolve them first** (`ManagePullRequest` `resolve_comment`, or the review-thread API), wait for required CI, then retry the normal merge above.
 
-```bash
-gh pr merge <N> --squash --admin
-```
-
-If conversations are unresolved, resolve them first (`ManagePullRequest` `resolve_comment`, or the review-thread GraphQL/API), then merge.
+Do **not** use `gh pr merge --admin` unless the user explicitly asks to bypass branch protection. `--admin` can skip required checks/reviews and must not be a default fallback.
 
 ### Do not rely on these for merge
 

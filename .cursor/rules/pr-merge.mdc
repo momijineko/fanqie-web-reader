@@ -16,12 +16,13 @@ gh api -X PUT repos/momijineko/fanqie-web-reader/pulls/<N>/merge \
   -f sha=<head_sha>
 ```
 
-Fallback: `gh pr merge <N> --squash --admin` (after resolving blocking review threads if needed).
+If conversations block merge: resolve threads first, wait for required CI, retry the normal merge. Do **not** use `gh pr merge --admin` unless the user explicitly asks to bypass branch protection.
 
 **Do not use for merge:**
 
 - `Github.merge_pull_request` MCP → always 403 with user PAT
 - `ManagePullRequest` → no merge action
 - Direct push to `main` → branch protection
+- `gh pr merge --admin` as a default fallback → bypasses required checks
 
 “用 Cursor 的 / 不要用 gh” means use the App `gh` token (`gh auth status` → account `cursor`), not “refuse to merge”.
