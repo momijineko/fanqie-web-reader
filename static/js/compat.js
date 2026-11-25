@@ -250,6 +250,25 @@
     html.classList.add('legacy-webview');
   }
 
+  // One-time: clear einkMode that older compat.js auto-wrote for dual-core
+  // Android + Chrome < 85. Manual toggle still works afterwards.
+  try {
+    if (!localStorage.getItem('einkAutoMigratedv1')) {
+      localStorage.setItem('einkAutoMigratedv1', '1');
+      var ua = navigator.userAgent || '';
+      var cores = navigator.hardwareConcurrency || 0;
+      var wasAutoTarget = /Android/i.test(ua) && major < 85 && cores > 0 && cores <= 2;
+      if (wasAutoTarget && localStorage.getItem('einkMode') === 'on') {
+        localStorage.removeItem('einkMode');
+        var prevMode = localStorage.getItem('readModeBeforeEink');
+        if (prevMode) {
+          localStorage.setItem('readMode', prevMode);
+          localStorage.removeItem('readModeBeforeEink');
+        }
+      }
+    }
+  } catch (e) {}
+
   // Expose for debugging
   window.__fanqieCompat = { chromeMajor: major, noFlexGap: html.classList.contains('no-flex-gap') };
 })();
