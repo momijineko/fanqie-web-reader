@@ -972,11 +972,11 @@ async function refreshAppResources(opts) {
   } catch (e) {}
   // Unregister SW / clear Cache Storage first, then signal siblings —
   // otherwise their reload still hits the old stale-while-revalidate worker.
+  // Use location.reload() (not ?_r=) so the URL stays `/` and still matches
+  // the precached app shell for offline loads after SW reinstalls.
   try { await clearResourceCaches(); } catch (e) {}
   try { localStorage.setItem(APP_RELOAD_SIGNAL_KEY, String(Date.now())); } catch (e) {}
-  const base = location.href.split('#')[0].split('?')[0];
-  const hash = location.hash || '';
-  location.replace(base + '?_r=' + Date.now() + hash);
+  location.reload();
 }
 
 async function fetchRemoteVersion() {
@@ -1098,12 +1098,9 @@ async function checkAppUpdate(opts) {
 }
 
 function setupServiceWorkerUpdates() {
-  // Sibling tab refreshed resources — hard-reload after SW was cleared
+  // Sibling tab refreshed resources — reload after SW was cleared (keep `/` URL)
   window.addEventListener('storage', e => {
-    if (e.key === APP_RELOAD_SIGNAL_KEY && e.newValue) {
-      const base = location.href.split('#')[0].split('?')[0];
-      location.replace(base + '?_r=' + Date.now() + (location.hash || ''));
-    }
+    if (e.key === APP_RELOAD_SIGNAL_KEY && e.newValue) location.reload();
   });
 
   if (!('serviceWorker' in navigator)) return;
