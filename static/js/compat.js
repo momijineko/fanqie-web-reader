@@ -250,17 +250,6 @@
     html.classList.add('legacy-webview');
   }
 
-  // First visit on dual-core Android + old WebView → default to e-ink mode
-  // (typical for small e-ink readers; skip if user already chose)
-  try {
-    var ua = navigator.userAgent || '';
-    var cores = navigator.hardwareConcurrency || 0;
-    var likelyEink = /Android/i.test(ua) && major < 85 && cores > 0 && cores <= 2;
-    if (likelyEink && localStorage.getItem('einkMode') == null) {
-      localStorage.setItem('einkMode', 'on');
-    }
-  } catch (e) {}
-
   // Expose for debugging
   window.__fanqieCompat = { chromeMajor: major, noFlexGap: html.classList.contains('no-flex-gap') };
 })();
