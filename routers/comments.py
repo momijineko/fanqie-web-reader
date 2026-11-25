@@ -657,6 +657,9 @@ def _normalize_comments(raw) -> list:
                 digg_count = int(src)
                 break
 
+        # Prefer real reply totals from stat/fields. Do NOT use
+        # expand.reply_show_count — that is a UI slot hint (often 1 even
+        # when reply_count is 0) and was falsely showing「展开 1 条回复」.
         reply_count = 0
         for src in (
             (comment_obj.get("stat") or {}).get("reply_count")
@@ -668,11 +671,9 @@ def _normalize_comments(raw) -> list:
             item.get("reply_count"),
             comment_obj.get("reply_count"),
             common.get("reply_count"),
-            ((comment_obj.get("expand") or {}).get("reply_show_count")
-             if isinstance(comment_obj.get("expand"), dict) else None),
         ):
-            if isinstance(src, (int, float)) and src > 0:
-                reply_count = int(src)
+            if isinstance(src, (int, float)):
+                reply_count = max(0, int(src))
                 break
 
         comment_id = (
