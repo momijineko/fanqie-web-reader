@@ -13,7 +13,7 @@
 
 /* ==================== Chapter list overlay ==================== */
 .chapter-list-overlay {
-  position: fixed; inset: 0; z-index: 300;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; inset: 0; z-index: 300;
   background: var(--card-bg); max-width: 720px; margin: 0 auto;
   display: flex; flex-direction: column;
   animation: slideUp 0.25s var(--ease-out);
@@ -83,7 +83,7 @@
 .bg-swatch { width: 36px; height: 36px; border-radius: 10px; border: 2px solid var(--border); cursor: pointer; position: relative; overflow: hidden; transition: transform 0.12s, border-color 0.15s; flex-shrink: 0; }
 .bg-swatch:active { transform: scale(0.92); }
 .bg-swatch.active { border-color: var(--accent); }
-.bg-swatch .mini-lines { position: absolute; inset: 6px; display: flex; flex-direction: column; gap: 3px; justify-content: center; }
+.bg-swatch .mini-lines { position: absolute; top: 6px; right: 6px; bottom: 6px; left: 6px; inset: 6px; display: flex; flex-direction: column; gap: 3px; justify-content: center; }
 .bg-swatch .mini-line { height: 2px; border-radius: 1px; }
 .bg-swatch .mini-line:nth-child(1) { width: 60%; }
 .bg-swatch .mini-line:nth-child(2) { width: 80%; }
@@ -133,7 +133,7 @@
 /* Viewport for page divs */
 .page-viewport {
   position: absolute;
-  inset: 0;
+  top: 0; right: 0; bottom: 0; left: 0; inset: 0;
   overflow: hidden;
 }
 
@@ -145,6 +145,7 @@
   left: 0;
   right: 0;
   bottom: 0;
+  padding: 12px 14px;
   padding: 12px max(14px, calc((100% - 680px) / 2));
   box-sizing: border-box;
   overflow-y: auto;
@@ -204,7 +205,7 @@
 
 /* Toolbar overlay (center tap) */
 .page-toolbar-overlay {
-  position: fixed; inset: 0; z-index: 210;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; inset: 0; z-index: 210;
   background: rgba(0,0,0,0.35); backdrop-filter: blur(6px);
   display: flex; flex-direction: column; justify-content: space-between;
   opacity: 0; pointer-events: none;

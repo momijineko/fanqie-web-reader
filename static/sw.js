@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fanqie-20';
+const CACHE_NAME = 'fanqie-22';
 const IMG_CACHE = 'fanqie-imgs';
 const STATIC_ASSETS = [
   '/',
@@ -10,6 +10,9 @@ const STATIC_ASSETS = [
   '/static/css/detail.css',
   '/static/css/reader.css',
   '/static/css/components.css',
+  '/static/css/compat.css',
+  '/static/js/compat.js',
+  '/static/js/icons.js',
   '/static/js/app.js',
   '/static/js/cache.js',
   '/static/js/views.js',

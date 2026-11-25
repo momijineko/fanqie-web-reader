@@ -308,6 +308,7 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 }
 .skel-reader-page .skel-reader-body {
   flex: 1; overflow: hidden;
+  padding: 12px 14px;
   padding: 12px max(14px, calc((100% - 680px) / 2));
 }
 .skel-reader-footer {
