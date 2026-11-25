@@ -920,6 +920,225 @@ function showToast(msg) {
   el._timer = setTimeout(() => el.style.opacity = '0', 2000);
 }
 
+// ---- App update detection / resource refresh ----
+const APP_VERSION_KEY = 'appKnownVersion';
+const APP_UPDATE_SNOOZE_KEY = 'appUpdateSnoozeVersion';
+const APP_RELOAD_SIGNAL_KEY = 'appReloadSignal';
+let _updateBannerShown = false;
+let _updateCheckInflight = null;
+let _updateCheckResult = null; // last settled { outdated, remote }
+
+async function clearResourceCaches() {
+  if (typeof cache !== 'undefined') {
+    cache.detail = {};
+    if (cache.content && cache.content.clear) cache.content.clear();
+  }
+  if (typeof paraCommentCounts !== 'undefined') {
+    for (const k of Object.keys(paraCommentCounts)) delete paraCommentCounts[k];
+  }
+  if ('caches' in window) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    } catch (e) {}
+  }
+  if ('serviceWorker' in navigator) {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(async reg => {
+        try {
+          if (reg.active) reg.active.postMessage({ type: 'CLEAR_CACHES' });
+          if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        } catch (e) {}
+        try { await reg.unregister(); } catch (e) {}
+      }));
+    } catch (e) {}
+  }
+}
+
+/** Force-clear SW/static caches and reload. Keeps shelf / progress / settings. */
+async function refreshAppResources(opts) {
+  opts = opts || {};
+  if (!opts.silent) {
+    if (!confirm('确认刷新应用资源？将清除页面与图片缓存并重新加载，书架与阅读进度会保留。')) return;
+  }
+  showToast('正在刷新资源…');
+  // Never block refresh on /api/version — use caller-provided version, else
+  // clear known version so post-reload checkAppUpdate re-syncs without banner.
+  try {
+    if (opts.version) localStorage.setItem(APP_VERSION_KEY, opts.version);
+    else localStorage.removeItem(APP_VERSION_KEY);
+    sessionStorage.removeItem(APP_UPDATE_SNOOZE_KEY);
+  } catch (e) {}
+  // Unregister SW / clear Cache Storage first, then signal siblings —
+  // otherwise their reload still hits the old stale-while-revalidate worker.
+  // Use location.reload() (not ?_r=) so the URL stays `/` and still matches
+  // the precached app shell for offline loads after SW reinstalls.
+  try { await clearResourceCaches(); } catch (e) {}
+  try { localStorage.setItem(APP_RELOAD_SIGNAL_KEY, String(Date.now())); } catch (e) {}
+  location.reload();
+}
+
+async function fetchRemoteVersion() {
+  const r = await fetch(API + '/api/version', { cache: 'no-store' });
+  const data = await r.json();
+  return (data && data.version) ? String(data.version) : '';
+}
+
+function dismissUpdateBanner() {
+  _updateBannerShown = false;
+  const el = $('updateBanner');
+  if (el) {
+    el.classList.remove('show');
+    if (el._remoteVersion) {
+      try { sessionStorage.setItem(APP_UPDATE_SNOOZE_KEY, el._remoteVersion); } catch (e) {}
+    }
+  }
+}
+
+function isUpdateSnoozed(remoteVersion) {
+  if (!remoteVersion) return false;
+  try {
+    return sessionStorage.getItem(APP_UPDATE_SNOOZE_KEY) === remoteVersion;
+  } catch (e) { return false; }
+}
+
+function showUpdateBanner(remoteVersion, force) {
+  if (!force && isUpdateSnoozed(remoteVersion)) return;
+  let el = $('updateBanner');
+  if (_updateBannerShown && el) {
+    // Banner already up — still refresh the version so 「更新」 writes appKnownVersion
+    if (remoteVersion) el._remoteVersion = remoteVersion;
+    return;
+  }
+  _updateBannerShown = true;
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'updateBanner';
+    el.className = 'update-banner';
+    el.innerHTML = `<div class="update-banner-inner">
+      <i data-lucide="refresh-cw" width="18" height="18"></i>
+      <span class="update-banner-text">发现新版本，点击更新</span>
+      <button type="button" class="update-banner-btn" id="updateBannerBtn">更新</button>
+      <button type="button" class="update-banner-dismiss" id="updateBannerDismiss" aria-label="稍后"><i data-lucide="x" width="16" height="16"></i></button>
+    </div>`;
+    document.body.appendChild(el);
+    const btn = $('updateBannerBtn');
+    const dismiss = $('updateBannerDismiss');
+    if (btn) btn.addEventListener('click', () => {
+      refreshAppResources({ silent: true, version: el._remoteVersion || '' });
+    });
+    if (dismiss) dismiss.addEventListener('click', dismissUpdateBanner);
+  }
+  el._remoteVersion = remoteVersion || '';
+  el.classList.add('show');
+  refreshIcons(el);
+}
+
+function _toastUpdateResult(result, fromUser) {
+  if (!fromUser || !result) return;
+  if (result.error === 'empty') showToast('无法获取版本信息');
+  else if (result.error) showToast('检查更新失败');
+  else if (result.outdated) showToast('发现新版本');
+  else showToast('已是最新版本');
+}
+
+/**
+ * Proactively compare /api/version with the last-known local version.
+ * opts.fromUser — show toast when already up to date / on failure
+ * opts.autoApply — skip banner and refresh immediately
+ */
+async function checkAppUpdate(opts) {
+  opts = opts || {};
+  if (_updateCheckInflight) {
+    const result = await _updateCheckInflight;
+    _toastUpdateResult(result, opts.fromUser);
+    if (result && result.outdated && result.remote) {
+      if (opts.autoApply) await refreshAppResources({ silent: true, version: result.remote });
+      else showUpdateBanner(result.remote, !!opts.fromUser);
+    }
+    return !!(result && result.outdated);
+  }
+  _updateCheckInflight = (async () => {
+    try {
+      const remote = await fetchRemoteVersion();
+      if (!remote) {
+        _updateCheckResult = { outdated: false, remote: '', error: 'empty' };
+        return _updateCheckResult;
+      }
+      let local = '';
+      try { local = localStorage.getItem(APP_VERSION_KEY) || ''; } catch (e) {}
+      if (!local) {
+        try { localStorage.setItem(APP_VERSION_KEY, remote); } catch (e) {}
+        _updateCheckResult = { outdated: false, remote };
+        return _updateCheckResult;
+      }
+      if (local === remote) {
+        dismissUpdateBanner();
+        try { sessionStorage.removeItem(APP_UPDATE_SNOOZE_KEY); } catch (e) {}
+        _updateCheckResult = { outdated: false, remote };
+        return _updateCheckResult;
+      }
+      _updateCheckResult = { outdated: true, remote };
+      return _updateCheckResult;
+    } catch (e) {
+      _updateCheckResult = { outdated: false, remote: '', error: 'network' };
+      return _updateCheckResult;
+    } finally {
+      _updateCheckInflight = null;
+    }
+  })();
+  const result = await _updateCheckInflight;
+  _toastUpdateResult(result, opts.fromUser);
+  if (result && result.outdated && result.remote) {
+    if (opts.autoApply) await refreshAppResources({ silent: true, version: result.remote });
+    else showUpdateBanner(result.remote, !!opts.fromUser);
+  }
+  return !!(result && result.outdated);
+}
+
+function setupServiceWorkerUpdates() {
+  // Sibling tab refreshed resources — reload after SW was cleared (keep `/` URL)
+  window.addEventListener('storage', e => {
+    if (e.key === APP_RELOAD_SIGNAL_KEY && e.newValue) location.reload();
+  });
+
+  if (!('serviceWorker' in navigator)) return;
+  // First-ever SW install also fires controllerchange — skip that reload
+  let hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(reg => {
+    // Periodic SW script check (browsers also check on navigation)
+    setInterval(() => { try { reg.update(); } catch (e) {} }, 30 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        try { reg.update(); } catch (e) {}
+        checkAppUpdate();
+      }
+    });
+    reg.addEventListener('updatefound', () => {
+      const nw = reg.installing;
+      if (!nw) return;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          // Wait for version — never show banner with empty version
+          checkAppUpdate();
+        }
+      });
+    });
+  }).catch(() => {});
+
+  navigator.serviceWorker.addEventListener('message', ev => {
+    const data = ev.data || {};
+    if (data.type === 'SW_UPDATED') checkAppUpdate();
+  });
+
+  // Do not auto-reload on controllerchange — SW activate navigates when the
+  // cache version bumps; otherwise version check / banner handles the prompt.
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) hadController = true;
+  });
+}
+
 // ---- Skeleton ----
 
 // Generic shimmer helpers

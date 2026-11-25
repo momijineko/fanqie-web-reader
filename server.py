@@ -5,12 +5,30 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from shared import client, cors_origins, _fanqie_client, logger
 from routers import books, comments, user
+
+
+class _StaticNoCacheMiddleware(BaseHTTPMiddleware):
+    """Prevent browsers from heuristically caching /static JS/CSS forever.
+
+    Service Worker revalidation uses cache:'reload', but a hard refresh without
+    SW (or first paint before SW claims) still hits the HTTP cache otherwise.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/static/") and path.endswith((
+            ".js", ".css", ".html", ".json", ".map",
+        )):
+            response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO").upper(),
@@ -39,6 +57,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Outer-most after CORS so static responses still get Cache-Control rewritten
+app.add_middleware(_StaticNoCacheMiddleware)
 logger.info("CORS origins: %s (credentials=%s)", _origins, "*" not in _origins)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")

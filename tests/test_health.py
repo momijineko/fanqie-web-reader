@@ -17,6 +17,23 @@ def test_health(client):
 
     assert response.status_code == 200
     assert response.json()["status"] == "ok"
+    assert "no-cache" in response.headers.get("cache-control", "")
+
+
+def test_version_no_cache(client):
+    response = client.get("/api/version")
+
+    assert response.status_code == 200
+    assert "version" in response.json()
+    assert "no-cache" in response.headers.get("cache-control", "")
+
+
+def test_sw_js_no_cache(client):
+    response = client.get("/sw.js")
+
+    assert response.status_code == 200
+    assert "no-cache" in response.headers.get("cache-control", "")
+    assert response.headers.get("service-worker-allowed") == "/"
 
 
 def test_index(client):
@@ -24,3 +41,11 @@ def test_index(client):
 
     assert response.status_code == 200
     assert 'id="app"' in response.text
+    assert "no-cache" in response.headers.get("cache-control", "")
+
+
+def test_static_js_no_cache(client):
+    response = client.get("/static/js/app.js")
+
+    assert response.status_code == 200
+    assert "no-cache" in response.headers.get("cache-control", "")

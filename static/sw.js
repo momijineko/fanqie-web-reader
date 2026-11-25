@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fanqie-24';
+const CACHE_NAME = 'fanqie-29';
 const IMG_CACHE = 'fanqie-imgs';
 const STATIC_ASSETS = [
   '/',
@@ -32,14 +32,51 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(
-    keys.filter(k => k !== CACHE_NAME && k !== IMG_CACHE).map(k => caches.delete(k))
-  )));
-  self.clients.claim();
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    const stale = keys.filter(k => k !== CACHE_NAME && k !== IMG_CACHE);
+    await Promise.all(stale.map(k => caches.delete(k)));
+    await self.clients.claim();
+    // Cache version bumped → force open tabs onto new assets.
+    // Prefer navigate so tabs still on the *previous* page script also reload;
+    // the page no longer auto-reloads on controllerchange (avoids double refresh).
+    if (stale.length) {
+      const clients = await self.clients.matchAll({ type: 'window' });
+      for (let i = 0; i < clients.length; i++) {
+        const c = clients[i];
+        if (typeof c.navigate === 'function') {
+          try { c.navigate(c.url); } catch (err) {
+            try { c.postMessage({ type: 'SW_UPDATED' }); } catch (e2) {}
+          }
+        } else {
+          try { c.postMessage({ type: 'SW_UPDATED' }); } catch (err) {}
+        }
+      }
+    }
+  })());
+});
+
+self.addEventListener('message', e => {
+  const data = e.data || {};
+  if (data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+    return;
+  }
+  if (data.type === 'CLEAR_CACHES') {
+    e.waitUntil(
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+    );
+  }
 });
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+
+  // Version / health: always network, never cache — used for update detection
+  if (url.pathname === '/api/version' || url.pathname === '/api/health') {
+    e.respondWith(fetch(e.request));
+    return;
+  }
 
   // Cache cover images from byteimg/fqnovelpic CDNs — ignore query signature
   if (url.hostname.includes('byteimg.com') || url.hostname.includes('fqnovelpic.com')) {
@@ -97,10 +134,24 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Static assets: cache-first
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(resp => {
-    const clone = resp.clone();
-    caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-    return resp;
-  })));
+  // Static assets: stale-while-revalidate — serve cache instantly, refresh in background.
+  // Fetch by URL + cache:'reload' so we never rebuild a navigate Request (throws on
+  // older Chrome/WebView) and still bypass the browser HTTP heuristic cache.
+  e.respondWith(
+    caches.open(CACHE_NAME).then(cache =>
+      cache.match(e.request).then(cached => {
+        let fetched;
+        try {
+          fetched = fetch(e.request.url, { cache: 'reload', credentials: 'same-origin' });
+        } catch (err) {
+          fetched = fetch(e.request);
+        }
+        fetched = fetched.then(resp => {
+          if (resp && resp.ok) cache.put(e.request, resp.clone()).catch(() => {});
+          return resp;
+        }).catch(() => cached);
+        return cached || fetched;
+      })
+    )
+  );
 });

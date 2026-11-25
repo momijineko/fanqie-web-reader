@@ -183,6 +183,36 @@
 .swatch-eink { background: #fff; border-color: #333; }
 .swatch-eink .mini-line { background: #111; }
 
+/* Update banner */
+.update-banner {
+  position: fixed; left: 12px; right: 12px; bottom: calc(64px + env(safe-area-inset-bottom));
+  z-index: 550; max-width: 480px; margin: 0 auto;
+  transform: translateY(120%); opacity: 0;
+  transition: transform var(--dur), opacity var(--dur);
+  pointer-events: none;
+}
+.update-banner.show { transform: translateY(0); opacity: 1; pointer-events: auto; }
+.update-banner-inner {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--card-bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg); padding: 12px 14px;
+}
+.update-banner-inner > svg { flex-shrink: 0; color: var(--accent); }
+.update-banner-text { flex: 1; font-size: 13px; font-weight: 500; line-height: 1.35; }
+.update-banner-btn {
+  flex-shrink: 0; border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
+  border-radius: var(--radius-pill); padding: 6px 14px;
+}
+.update-banner-btn:active { background: var(--accent-hover); }
+.update-banner-dismiss {
+  flex-shrink: 0; border: none; background: transparent; color: var(--text-muted);
+  cursor: pointer; padding: 4px; display: flex; align-items: center;
+}
+body.theme-eink .update-banner-inner { box-shadow: none; border-color: #111; }
+body.theme-eink .update-banner-btn { background: #111; color: #fff; }
+
 /* About card */
 .about-section { margin-top: var(--sp-6); }
 .about-card { background: var(--card-bg); border-radius: var(--radius-md); padding: 32px 24px; box-shadow: var(--shadow); text-align: center; }
