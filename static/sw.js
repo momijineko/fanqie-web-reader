@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fanqie-26';
+const CACHE_NAME = 'fanqie-27';
 const IMG_CACHE = 'fanqie-imgs';
 const STATIC_ASSETS = [
   '/',

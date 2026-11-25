@@ -923,6 +923,7 @@ function showToast(msg) {
 // ---- App update detection / resource refresh ----
 const APP_VERSION_KEY = 'appKnownVersion';
 const APP_UPDATE_SNOOZE_KEY = 'appUpdateSnoozeVersion';
+const APP_RELOAD_SIGNAL_KEY = 'appReloadSignal';
 let _updateBannerShown = false;
 let _updateCheckInflight = null;
 let _updateCheckResult = null; // last settled { outdated, remote }
@@ -962,11 +963,15 @@ async function refreshAppResources(opts) {
     if (!confirm('确认刷新应用资源？将清除页面与图片缓存并重新加载，书架与阅读进度会保留。')) return;
   }
   showToast('正在刷新资源…');
-  // Never block refresh on /api/version — use caller-provided version only
-  if (opts.version) {
-    try { localStorage.setItem(APP_VERSION_KEY, opts.version); } catch (e) {}
-    try { sessionStorage.removeItem(APP_UPDATE_SNOOZE_KEY); } catch (e) {}
-  }
+  // Never block refresh on /api/version — use caller-provided version, else
+  // clear known version so post-reload checkAppUpdate re-syncs without banner.
+  try {
+    if (opts.version) localStorage.setItem(APP_VERSION_KEY, opts.version);
+    else localStorage.removeItem(APP_VERSION_KEY);
+    sessionStorage.removeItem(APP_UPDATE_SNOOZE_KEY);
+    // Notify sibling tabs (storage event) before we tear down this one
+    localStorage.setItem(APP_RELOAD_SIGNAL_KEY, String(Date.now()));
+  } catch (e) {}
   try { await clearResourceCaches(); } catch (e) {}
   const base = location.href.split('#')[0].split('?')[0];
   const hash = location.hash || '';
@@ -1092,6 +1097,11 @@ async function checkAppUpdate(opts) {
 }
 
 function setupServiceWorkerUpdates() {
+  // Sibling tab refreshed resources — reload so we don't keep stale in-memory JS
+  window.addEventListener('storage', e => {
+    if (e.key === APP_RELOAD_SIGNAL_KEY && e.newValue) location.reload();
+  });
+
   if (!('serviceWorker' in navigator)) return;
   // First-ever SW install also fires controllerchange — skip that reload
   let hadController = !!navigator.serviceWorker.controller;
