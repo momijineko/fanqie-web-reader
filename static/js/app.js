@@ -969,10 +969,11 @@ async function refreshAppResources(opts) {
     if (opts.version) localStorage.setItem(APP_VERSION_KEY, opts.version);
     else localStorage.removeItem(APP_VERSION_KEY);
     sessionStorage.removeItem(APP_UPDATE_SNOOZE_KEY);
-    // Notify sibling tabs (storage event) before we tear down this one
-    localStorage.setItem(APP_RELOAD_SIGNAL_KEY, String(Date.now()));
   } catch (e) {}
+  // Unregister SW / clear Cache Storage first, then signal siblings —
+  // otherwise their reload still hits the old stale-while-revalidate worker.
   try { await clearResourceCaches(); } catch (e) {}
+  try { localStorage.setItem(APP_RELOAD_SIGNAL_KEY, String(Date.now())); } catch (e) {}
   const base = location.href.split('#')[0].split('?')[0];
   const hash = location.hash || '';
   location.replace(base + '?_r=' + Date.now() + hash);
@@ -1097,9 +1098,12 @@ async function checkAppUpdate(opts) {
 }
 
 function setupServiceWorkerUpdates() {
-  // Sibling tab refreshed resources — reload so we don't keep stale in-memory JS
+  // Sibling tab refreshed resources — hard-reload after SW was cleared
   window.addEventListener('storage', e => {
-    if (e.key === APP_RELOAD_SIGNAL_KEY && e.newValue) location.reload();
+    if (e.key === APP_RELOAD_SIGNAL_KEY && e.newValue) {
+      const base = location.href.split('#')[0].split('?')[0];
+      location.replace(base + '?_r=' + Date.now() + (location.hash || ''));
+    }
   });
 
   if (!('serviceWorker' in navigator)) return;
