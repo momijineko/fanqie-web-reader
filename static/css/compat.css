@@ -1,0 +1,124 @@
+/* Auto-generated flex gap fallbacks for browsers without flex gap (Chrome < 84) */
+/* Applied when <html class="no-flex-gap"> is set by compat.js */
+
+html.no-flex-gap .about-github > * + * { margin-left: 6px; }
+html.no-flex-gap .author-header > * + * { margin-left: var(--sp-4); }
+html.no-flex-gap .author-meta { margin: calc((var(--sp-2)) / -2); }
+html.no-flex-gap .author-meta > * { margin: calc((var(--sp-2)) / 2); }
+html.no-flex-gap .author-meta .meta-item > * + * { margin-left: 4px; }
+html.no-flex-gap .bg-swatch .mini-lines > * + * { margin-top: 3px; }
+html.no-flex-gap .bg-swatches > * + * { margin-left: 12px; }
+html.no-flex-gap .book-card > * + * { margin-left: 12px; }
+html.no-flex-gap .book-detail-actions { margin: calc((var(--sp-2)) / -2); }
+html.no-flex-gap .book-detail-actions > * { margin: calc((var(--sp-2)) / 2); }
+html.no-flex-gap .book-detail-desc-toggle > * + * { margin-left: 4px; }
+html.no-flex-gap .book-detail-header > * + * { margin-left: 16px; }
+html.no-flex-gap .book-detail-meta { margin: calc((var(--sp-2)) / -2); }
+html.no-flex-gap .book-detail-meta > * { margin: calc((var(--sp-2)) / 2); }
+html.no-flex-gap .book-list > * + * { margin-top: 10px; }
+html.no-flex-gap .book-meta { margin: calc((4px) / -2); }
+html.no-flex-gap .book-meta > * { margin: calc((4px) / 2); }
+html.no-flex-gap .book-title > * + * { margin-left: 6px; }
+html.no-flex-gap .bottom-nav-item > * + * { margin-top: 2px; }
+html.no-flex-gap .chapter-item > * + * { margin-left: var(--sp-3); }
+html.no-flex-gap .chapter-list-header > * + * { margin-left: var(--sp-2); }
+html.no-flex-gap .chapter-section-title { margin: calc((8px) / -2); }
+html.no-flex-gap .chapter-section-title > * { margin: calc((8px) / 2); }
+html.no-flex-gap .chapter-slider-wrap > * + * { margin-left: 8px; }
+html.no-flex-gap .comment-digg > * + * { margin-left: 3px; }
+html.no-flex-gap .comment-item > * + * { margin-left: 12px; }
+html.no-flex-gap .comment-meta > * + * { margin-left: var(--sp-2); }
+html.no-flex-gap .comment-reply .comment-item > * + * { margin-left: 8px; }
+html.no-flex-gap .comment-reply-toggle > * + * { margin-left: 4px; }
+html.no-flex-gap .comment-stickers { margin: calc((6px) / -2); }
+html.no-flex-gap .comment-stickers > * { margin: calc((6px) / 2); }
+html.no-flex-gap .continue-card > * + * { margin-left: 16px; }
+html.no-flex-gap .discover-card > * + * { margin-left: var(--sp-3); }
+html.no-flex-gap .discover-tag > * + * { margin-left: 6px; }
+html.no-flex-gap .discover-tags > * + * { margin-left: 10px; }
+html.no-flex-gap .discover-tip > * + * { margin-left: var(--sp-2); }
+html.no-flex-gap .header-top > * + * { margin-left: 8px; }
+html.no-flex-gap .home-empty .hot-tags { margin: calc((8px) / -2); }
+html.no-flex-gap .home-empty .hot-tags > * { margin: calc((8px) / 2); }
+html.no-flex-gap .img-viewer-toolbar > * + * { margin-left: 8px; }
+html.no-flex-gap .login-tabs > * + * { margin-left: 8px; }
+html.no-flex-gap .modal-actions > * + * { margin-left: 10px; }
+html.no-flex-gap .modal-step > * + * { margin-left: 10px; }
+html.no-flex-gap .page-footer-left > * + * { margin-left: 6px; }
+html.no-flex-gap .page-footer-right > * + * { margin-left: 8px; }
+html.no-flex-gap .page-header > * + * { margin-left: var(--sp-2); }
+html.no-flex-gap .page-toolbar-bottom .nav-row button > * + * { margin-left: 4px; }
+html.no-flex-gap .page-toolbar-bottom .slider-row > * + * { margin-left: 12px; }
+html.no-flex-gap .page-toolbar-top > * + * { margin-left: var(--sp-2); }
+html.no-flex-gap .profile-login-section > * + * { margin-left: 16px; }
+html.no-flex-gap .profile-setting-item > * + * { margin-left: 12px; }
+html.no-flex-gap .qr-login-box > * + * { margin-top: 12px; }
+html.no-flex-gap .related-scroll > * + * { margin-left: 10px; }
+html.no-flex-gap .scroll-reader .reader-nav > * + * { margin-left: var(--sp-3); }
+html.no-flex-gap .scroll-reader .reader-nav button > * + * { margin-left: 4px; }
+html.no-flex-gap .search-bar > * + * { margin-left: 8px; }
+html.no-flex-gap .search-controls { margin: calc((6px) / -2); }
+html.no-flex-gap .search-controls > * { margin: calc((6px) / 2); }
+html.no-flex-gap .search-tabs > * + * { margin-left: 6px; }
+html.no-flex-gap .settings-chips > * + * { margin-left: 8px; }
+html.no-flex-gap .settings-row > * + * { margin-left: var(--sp-3); }
+html.no-flex-gap .shelf-folder-back > * + * { margin-left: 6px; }
+html.no-flex-gap .shelf-group-title > * + * { margin-left: 6px; }
+html.no-flex-gap .shelf-tabs > * + * { margin-left: 6px; }
+html.no-flex-gap .skel-author-header > * + * { margin-left: var(--sp-4); }
+html.no-flex-gap .skel-chapter-header { margin: calc((8px) / -2); }
+html.no-flex-gap .skel-chapter-header > * { margin: calc((8px) / 2); }
+html.no-flex-gap .skel-chapter-item > * + * { margin-left: var(--sp-3); }
+html.no-flex-gap .skel-comment-item > * + * { margin-left: 12px; }
+html.no-flex-gap .skel-comment-reply > * + * { margin-left: 8px; }
+html.no-flex-gap .skel-continue-card > * + * { margin-left: 16px; }
+html.no-flex-gap .skel-continue-info > * + * { margin-top: 6px; }
+html.no-flex-gap .skel-detail-actions { margin: calc((var(--sp-2)) / -2); }
+html.no-flex-gap .skel-detail-actions > * { margin: calc((var(--sp-2)) / 2); }
+html.no-flex-gap .skel-detail-desc > * + * { margin-top: 8px; }
+html.no-flex-gap .skel-detail-header > * + * { margin-left: 16px; }
+html.no-flex-gap .skel-detail-meta { margin: calc((var(--sp-2)) / -2); }
+html.no-flex-gap .skel-detail-meta > * { margin: calc((var(--sp-2)) / 2); }
+html.no-flex-gap .skel-discover-card > * + * { margin-left: var(--sp-3); }
+html.no-flex-gap .skel-discover-tags > * + * { margin-left: 10px; }
+html.no-flex-gap .skel-discover-tip > * + * { margin-left: var(--sp-2); }
+html.no-flex-gap .skel-discover-welcome > * + * { margin-top: 6px; }
+html.no-flex-gap .skel-meta-row { margin: calc((4px) / -2); }
+html.no-flex-gap .skel-meta-row > * { margin: calc((4px) / 2); }
+html.no-flex-gap .skel-reader-header > * + * { margin-left: var(--sp-2); }
+html.no-flex-gap .skel-reader-nav > * + * { margin-left: var(--sp-3); }
+html.no-flex-gap .skel-reader-para > * + * { margin-top: 0.55em; }
+html.no-flex-gap .skel-search-controls > * + * { margin-left: 4px; }
+html.no-flex-gap .skel-shelf-tabs > * + * { margin-left: 6px; }
+html.no-flex-gap .skel-title-row > * + * { margin-left: 6px; }
+html.no-flex-gap .skeleton-card > * + * { margin-left: 12px; }
+html.no-flex-gap .skeleton-list > * + * { margin-top: 10px; }
+html.no-flex-gap .stats-bar > * + * { margin-left: 16px; }
+html.no-flex-gap .theme-swatches > * + * { margin-left: 8px; }
+html.no-flex-gap .theme-swatches .mini-lines > * + * { margin-top: 2px; }
+html.no-flex-gap .volume-header > * + * { margin-left: 6px; }
+
+/* ---- inset already expanded in source; aspect-ratio fallbacks ---- */
+html.no-aspect-ratio .shelf-grid-item .cover-wrap,
+html.no-aspect-ratio .skel-cover-shelf {
+  height: 0;
+  padding-bottom: 133.333%;
+}
+html.no-aspect-ratio .shelf-grid-item .cover-wrap > img,
+html.no-aspect-ratio .shelf-grid-item .cover-wrap > .cover-badge {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+}
+html.no-aspect-ratio .skel-shelf-cover {
+  height: 0;
+  padding-bottom: 133.333%;
+}
+html.no-aspect-ratio .comment-img {
+  height: 0;
+  padding-bottom: 100%;
+  object-fit: cover;
+}
+
+/* color-mix / backdrop ignored on old WebView — ensure solid fallbacks already in source */
+
+/* Safe-area env() unsupported → 0; padding-bottom on body still ok */

@@ -10,10 +10,12 @@
 <link rel="stylesheet" href="/static/css/detail.css">
 <link rel="stylesheet" href="/static/css/reader.css">
 <link rel="stylesheet" href="/static/css/components.css">
+<link rel="stylesheet" href="/static/css/compat.css">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="shortcut icon" href="https://p1-tt.byteimg.com/origin/novel-static/a3621391ca2e537045168afda6722ee9" type="image/x-icon">
 <meta name="theme-color" content="#e8722a">
-<script src="https://unpkg.com/lucide@0.525.0"></script>
+<script src="/static/js/compat.js"></script>
+<script src="/static/js/icons.js"></script>
 </head>
 <body>
 
@@ -25,7 +27,7 @@
   </div>
   <img id="imgViewerContent" src="" alt="" draggable="false">
 </div>
-<div class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:isEink()?'instant':'smooth'})"><i data-lucide="arrow-up" width="18" height="18"></i></div>
+<div class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:isEink()?'auto':'smooth'})"><i data-lucide="arrow-up" width="18" height="18"></i></div>
 
 <div class="header">
   <div class="header-top">
@@ -63,7 +65,7 @@
 <script src="/static/js/views.js"></script>
 <script src="/static/js/reader.js"></script>
 <script src="/static/js/main.js"></script>
-<script>lucide.createIcons();</script>
+<script>if (window.lucide) try { lucide.createIcons(); } catch (e) {}</script>
 <script>
 (function(){
   if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;

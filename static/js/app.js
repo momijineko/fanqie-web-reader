@@ -197,8 +197,8 @@ function _initEinkScroll() {
     const ctx = _getScrollCtx(e);
     const vh = (ctx.el ? ctx.el.clientHeight : window.innerHeight) * 0.9;
     const target = ctx.top + dir * vh;
-    if (ctx.el) ctx.el.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'instant' });
-    else window.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'instant' });
+    if (ctx.el) ctx.el.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'auto' });
+    else window.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'auto' });
   });
 
   body.addEventListener('wheel', e => {
@@ -209,8 +209,8 @@ function _initEinkScroll() {
     const ctx = _getScrollCtx(e);
     const vh = (ctx.el ? ctx.el.clientHeight : window.innerHeight) * 0.9;
     const target = ctx.top + dir * vh;
-    if (ctx.el) ctx.el.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'instant' });
-    else window.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'instant' });
+    if (ctx.el) ctx.el.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'auto' });
+    else window.scrollTo({ top: Math.max(0, Math.min(target, ctx.max)), behavior: 'auto' });
   }, { passive: false });
 }
 // Last click position for circular reveal animation

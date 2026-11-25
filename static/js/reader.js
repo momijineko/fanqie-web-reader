@@ -266,7 +266,8 @@ function saveVisibleScrollProgress(bid, total, fallbackTitle) {
   const ch = d.chapters[saveIdx];
   if (!ch) return;
   // Continuous-document Y only applies to the chapter that owns the initial content
-  if (saveIdx !== (parseInt(document.querySelector('#readerContent .para-wrap')?.dataset.chapterIdx, 10) || 0)) {
+  const firstWrap = document.querySelector('#readerContent .para-wrap');
+  if (saveIdx !== (parseInt(firstWrap && firstWrap.dataset.chapterIdx, 10) || 0)) {
     offset.scrollY = 0;
   }
   saveReaderProgress(bid, saveIdx, ch.ChapterID, ch.Name || fallbackTitle || '', total, offset);
@@ -970,8 +971,9 @@ function setupPgGestures() {
       dragCurrentPage.style.transition = 'none';
       dragCurrentPage.style.transform = `translateX(${dx}px)`;
       const cw = container.clientWidth;
-      const prev = $('pageViewport')?.querySelector(`.page-page[data-page="${pg.curPage - 1}"]`);
-      const next = $('pageViewport')?.querySelector(`.page-page[data-page="${pg.curPage + 1}"]`);
+      const viewport = $('pageViewport');
+      const prev = viewport && viewport.querySelector(`.page-page[data-page="${pg.curPage - 1}"]`);
+      const next = viewport && viewport.querySelector(`.page-page[data-page="${pg.curPage + 1}"]`);
       if (prev && prev.style.display !== 'none') { prev.style.transition = 'none'; prev.style.transform = `translateX(${-cw + dx}px)`; }
       if (next && next.style.display !== 'none') { next.style.transition = 'none'; next.style.transform = `translateX(${cw + dx}px)`; }
     }
