@@ -47,6 +47,65 @@ def test_normalize_comments_extracts_comment_id_and_reply_count():
     assert comments[0]["content"] == "主评"
 
 
+def test_normalize_comments_ignores_expand_reply_show_count():
+    """expand.reply_show_count is a UI slot hint, not an actual reply total.
+
+    Live Fanqie payloads often set reply_show_count=1 while stat.reply_count=0,
+    which previously showed a dead「展开 1 条回复」button.
+    """
+    raw = {
+        "code": 0,
+        "data": {
+            "data_list": [
+                {
+                    "comment": {
+                        "comment_id": "7671158225588863806",
+                        "common": {
+                            "content": {"text": "[哭]"},
+                            "create_timestamp": 1786082602,
+                            "user_info": {
+                                "base_info": {
+                                    "user_name": "汐汐不嘻曦",
+                                    "user_avatar": "",
+                                }
+                            },
+                        },
+                        "stat": {"digg_count": 5, "reply_count": 0},
+                        "expand": {
+                            "reply_show_count": 1,
+                            "reply_show_row": 3,
+                        },
+                    }
+                },
+                {
+                    "comment": {
+                        "comment_id": "7688743694229947198",
+                        "common": {
+                            "content": {"text": "小哥小哥"},
+                            "create_timestamp": 1790177964,
+                            "user_info": {
+                                "base_info": {
+                                    "user_name": "羽丘话事人",
+                                    "user_avatar": "",
+                                }
+                            },
+                        },
+                        "stat": {"digg_count": 1, "reply_count": 1},
+                        "expand": {
+                            "reply_show_count": 1,
+                            "reply_show_row": 3,
+                        },
+                    }
+                },
+            ]
+        },
+    }
+    comments = _normalize_comments(raw)
+    assert len(comments) == 2
+    assert comments[0]["reply_count"] == 0
+    assert comments[1]["reply_count"] == 1
+
+
 def test_normalize_replies_handles_capital_common():
     """Official reply payloads use ``Common`` (capital C)."""
     raw = {
