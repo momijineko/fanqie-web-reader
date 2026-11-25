@@ -869,40 +869,60 @@ function skelLine(w, h) { return `<div class="skel-line" style="${h?'height:'+h+
 function skelCircle(size) { return `<div class="skel-circle" style="width:${size}px;height:${size}px"></div>`; }
 function skelPill(w) { return `<div class="skel-pill" style="width:${w}px"></div>`; }
 
+function skelBookCard(opts) {
+  const author = opts && opts.author;
+  const cls = author ? 'skeleton-card skel-author-book' : 'skeleton-card';
+  // Mirrors .book-card: title+badge, author/score, 2-line desc, meta tags
+  return `<div class="${cls}">
+    <div class="skel-cover"></div>
+    <div class="skeleton-info">
+      <div class="skel-title-row"><div class="skel-line" style="height:15px;margin-right:22%"></div><div class="skel-status-badge"></div></div>
+      ${author ? `<div class="skel-line skel-book-short" style="height:11px;margin-right:40%"></div>` : ''}
+      <div class="skel-line skel-book-author" style="height:12px;margin-right:${author ? 45 : 50}%"></div>
+      <div class="skel-line skel-book-desc" style="height:12px;margin-right:4%"></div>
+      <div class="skel-line skel-book-desc" style="height:12px;margin-right:38%"></div>
+      <div class="skel-meta-row">
+        <div class="skel-line" style="width:34px;height:10px;margin:0;flex:none"></div>
+        <div class="skel-line" style="width:48px;height:10px;margin:0;flex:none"></div>
+        <div class="skel-tag-pill"></div>
+        <div class="skel-tag-pill" style="width:36px"></div>
+      </div>
+    </div>
+  </div>`;
+}
+
 // 1. Home page skeleton (discover + continue reading)
 function skeletonHome() {
   let h = '';
-  // Continue reading card
   h += `<div class="skel-continue-card">
     <div class="skel-continue-info">
-      ${skelLine(60,10)}
-      ${skelLine(30,16)}
-      ${skelLine(40,12)}
+      ${skelLine(72,11)}
+      ${skelLine(35,17)}
+      ${skelLine(48,13)}
     </div>
     <div class="skel-circle" style="width:52px;height:52px;flex-shrink:0"></div>
     <div class="skel-continue-chev"></div>
   </div>`;
-  // Discover welcome
   h += `<div class="skel-discover">
     <div class="skel-discover-welcome">
       <div class="skel-discover-emoji">📚</div>
-      <div class="skel-line" style="height:20px;margin-right:60%"></div>
-      <div class="skel-line" style="height:14px;margin-right:40%"></div>
+      <div class="skel-line" style="height:20px;width:120px;margin:0 auto"></div>
+      <div class="skel-line" style="height:14px;width:240px;max-width:90%;margin:0 auto"></div>
     </div>
     <div class="skel-discover-section">
-      <div class="skel-line" style="height:14px;margin-right:60%;margin-bottom:12px"></div>
+      <div class="skel-line skel-discover-section-title" style="height:15px;width:72px"></div>
       <div class="skel-discover-tags">
-        ${[82,90,72,84,78].map(w => `<div class="skel-pill" style="width:${w}px;height:32px"></div>`).join('')}
+        ${[72,78,78,78,78,78,78,78].map(w => `<div class="skel-pill" style="width:${w}px;height:36px"></div>`).join('')}
       </div>
     </div>
     <div class="skel-discover-section">
-      <div class="skel-line" style="height:14px;margin-right:60%;margin-bottom:12px"></div>
+      <div class="skel-line skel-discover-section-title" style="height:15px;width:72px"></div>
       <div class="skel-discover-grid">
-        ${[0,1,2,3].map(() => `<div class="skel-discover-card"><div class="skel-discover-card-icon"></div><div class="skel-discover-card-name"></div></div>`).join('')}
+        ${[0,1,2,3,4,5,6,7].map(() => `<div class="skel-discover-card"><div class="skel-discover-card-icon"></div><div class="skel-discover-card-name"></div></div>`).join('')}
       </div>
     </div>
     <div class="skel-discover-tip">
-      <div class="skel-line" style="height:14px;margin-right:50%"></div>
+      <div class="skel-line" style="height:14px;width:200px;max-width:80%;margin:0"></div>
     </div>
   </div>`;
   return h;
@@ -910,63 +930,55 @@ function skeletonHome() {
 
 // 2. Search results skeleton (book cards list)
 function skeletonResults(count) {
-  let h = '<div class="skeleton-list">';
-  // Search controls row
-  h += `<div class="skel-search-controls">
-    <div class="skel-line" style="height:12px;margin-right:70%"></div>
-    ${[56,48,50,56].map(w => `<div class="skel-pill" style="width:${w}px;height:26px"></div>`).join('')}
+  // Two control rows: sort buttons + tag chips (mirrors renderResults)
+  let h = `<div class="skel-search-controls">
+    <div class="skel-line" style="width:42px;height:12px;margin:0;flex:none"></div>
+    ${[48,48,48,48].map(w => `<div class="skel-pill" style="width:${w}px;height:26px"></div>`).join('')}
+  </div>
+  <div class="skel-search-controls skel-search-tags">
+    ${[48,56,48,56,48].map(w => `<div class="skel-pill" style="width:${w}px;height:26px"></div>`).join('')}
   </div>`;
-  for (let i = 0; i < (count || 5); i++) {
-    h += `<div class="skeleton-card">
-      <div class="skeleton-cover"></div>
-      <div class="skeleton-info">
-        <div class="skel-title-row"><div class="skel-line" style="margin-right:25%"></div><div class="skel-status-badge"></div></div>
-        ${skelLine(50,11)}
-        <div class="skel-line" style="height:11px;margin-right:8%"></div>
-        <div class="skel-line" style="height:11px;margin-right:55%"></div>
-        <div class="skel-meta-row"><div class="skel-tag-pill"></div>${skelLine(60,10)}${skelLine(65,10)}</div>
-      </div>
-    </div>`;
-  }
+  h += '<div class="skeleton-list">';
+  for (let i = 0; i < (count || 5); i++) h += skelBookCard();
   h += '</div>';
   return h;
 }
 
-// 3. Book detail skeleton
+// 3. Book detail skeleton — mirrors .book-detail + .chapter-section + sticky
 function skeletonDetail() {
   let h = '<div class="skel-detail">';
-  // Detail header
-  h += `<div class="skel-detail-header">
-    <div class="skel-cover-lg"></div>
-    <div class="skel-detail-info">
-      <div class="skel-line skel-detail-title-line" style="margin-right:15%"></div>
-      <div class="skel-line skel-detail-alias-line" style="margin-right:35%"></div>
-      <div class="skel-line skel-detail-author-line" style="margin-right:55%"></div>
-      <div class="skel-detail-meta">
-        <div class="skel-tag-pill"></div>
-        <div class="skel-detail-stat-line" style="width:48px"></div>
-        <div class="skel-detail-stat-line" style="width:45px"></div>
-        <div class="skel-detail-stat-line" style="width:56px"></div>
-      </div>
-      <div class="skel-detail-actions">
-        <div class="skel-pill skel-detail-btn-primary" style="height:34px"></div>
-        <div class="skel-pill skel-detail-btn-outline" style="height:34px"></div>
-        <div class="skel-pill skel-detail-btn-outline" style="height:34px"></div>
-        <div class="skel-pill skel-detail-btn-outline" style="height:34px"></div>
+  h += `<div class="skel-detail-card">
+    <div class="skel-detail-header">
+      <div class="skel-cover-lg"></div>
+      <div class="skel-detail-info">
+        <div class="skel-line skel-detail-title-line" style="margin-right:18%"></div>
+        <div class="skel-line skel-detail-alias-line" style="margin-right:40%"></div>
+        <div class="skel-line skel-detail-author-line" style="margin-right:55%"></div>
+        <div class="skel-detail-meta">
+          <div class="skel-tag-pill"></div>
+          <div class="skel-detail-stat-line" style="width:40px"></div>
+          <div class="skel-detail-stat-line" style="width:44px"></div>
+          <div class="skel-detail-stat-line" style="width:56px"></div>
+        </div>
+        <div class="skel-detail-actions">
+          <div class="skel-pill skel-detail-btn-primary"></div>
+          <div class="skel-pill skel-detail-btn-outline"></div>
+          <div class="skel-pill skel-detail-btn-outline"></div>
+          <div class="skel-pill skel-detail-btn-outline"></div>
+        </div>
       </div>
     </div>
+    <div class="skel-detail-desc">
+      <div class="skel-line skel-detail-text-line" style="margin-right:4%"></div>
+      <div class="skel-line skel-detail-text-line" style="margin-right:8%"></div>
+      <div class="skel-line skel-detail-text-line" style="margin-right:42%"></div>
+    </div>
+    <div class="skel-detail-desc-toggle"><div class="skel-line" style="height:12px;width:88px;margin:0 auto"></div></div>
   </div>`;
-  // Description
-  h += `<div class="skel-detail-desc">
-    <div class="skel-line skel-detail-text-line" style="margin-right:8%"></div>
-    <div class="skel-line skel-detail-text-line" style="margin-right:4%"></div>
-    <div class="skel-line skel-detail-text-line" style="margin-right:35%"></div>
-  </div>
-  <div class="skel-detail-desc-toggle"><div class="skel-line" style="height:12px;width:140px;margin:0 auto"></div></div>`;
   h += `<div class="skel-chapter-section">
     <div class="skel-chapter-header">
-      <div class="skel-line" style="height:14px;margin-right:45%"></div>
-      <div class="skel-pill" style="width:120px;height:26px"></div>
+      <div class="skel-line" style="height:14px;width:140px;margin:0;flex:none"></div>
+      <div class="skel-pill" style="width:120px;height:28px"></div>
     </div>
     <div class="skel-chapter-list">
       ${Array.from({length:8}, (_, i) => {
@@ -975,41 +987,58 @@ function skeletonDetail() {
       }).join('')}
     </div>
   </div>`;
-  // Sticky bottom
-  h += `<div class="skel-detail-sticky-spacer"></div><div class="skel-detail-sticky"><div class="skel-pill" style="width:100%;height:44px"></div></div>`;
+  h += `<div class="skel-detail-sticky-spacer"></div><div class="skel-detail-sticky"><div class="skel-pill skel-detail-sticky-btn"></div></div>`;
   h += '</div>';
   return h;
 }
 
-// 4. Reader skeleton
+// 4. Reader skeleton — mirrors .paginated-reader header + page body + footer
 function skeletonReader() {
   let h = '<div class="skel-reader">';
-  h += `<div class="page-header">
-    <div class="skel-line" style="width:44px;height:44px;border-radius:50%"></div>
-    <div class="skel-line" style="height:14px;max-width:40%;flex:1;margin:0 auto"></div>
-    <div class="skel-line" style="width:36px;height:36px;border-radius:8px"></div>
+  h += `<div class="skel-reader-header">
+    <div class="skel-line skel-reader-back"></div>
+    <div class="skel-reader-title-wrap"><div class="skel-line skel-reader-title"></div></div>
+    <div class="skel-line skel-reader-settings"></div>
   </div>`;
+  h += '<div class="skel-reader-body">';
   for (let i = 0; i < 8; i++) {
-    const mr = [8,4,25,12,35,4,15,45][i];
-    h += `<div class="skel-reader-para">
-      <div class="skel-line" style="margin-right:${mr}%"></div>
-      ${i < 6 ? `<div class="skel-line" style="margin-top:6px;margin-right:${mr + 10}%"></div>` : ''}
-    </div>`;
+    const ends = [12, 28, 8, 35, 18, 45, 22, 55][i];
+    const lines = i < 3 ? 3 : (i < 6 ? 2 : 2);
+    h += '<div class="skel-reader-para">';
+    for (let j = 0; j < lines; j++) {
+      const mr = j === lines - 1 ? ends : 0;
+      h += `<div class="skel-line"${mr ? ` style="margin-right:${mr}%"` : ''}></div>`;
+    }
+    h += '</div>';
   }
-  h += '</div>';
+  h += `</div>
+  <div class="skel-reader-footer">
+    <div class="skel-line" style="width:42%;height:11px;margin:0"></div>
+    <div class="skel-line" style="width:64px;height:11px;margin:0;flex:none"></div>
+  </div></div>`;
   return h;
 }
 
-// 5. Comments skeleton
+// 5. Comments skeleton — mirrors avatar + body row layout
 function skeletonComments(count) {
   let h = '<div class="skel-comments">';
-  h += `<div class="skel-line" style="height:16px;margin-right:60%;margin-bottom:16px"></div>`;
+  h += `<div class="skel-comments-title"></div>`;
   for (let i = 0; i < (count || 4); i++) {
     h += `<div class="skel-comment-item">
-      ${skelLine(65,12)}
-      ${skelLine(8,13)}
-      ${skelLine(25,13)}
-      ${skelLine(75,10)}
+      <div class="skel-circle skel-comment-avatar"></div>
+      <div class="skel-comment-body">
+        <div class="skel-line" style="height:12px;width:72px;margin:0"></div>
+        <div class="skel-line" style="height:14px;margin-right:4%;margin-top:4px"></div>
+        <div class="skel-line" style="height:14px;margin-right:${20 + i * 8}%;margin-top:4px"></div>
+        <div class="skel-line" style="height:10px;width:96px;margin-top:6px"></div>
+        ${i === 0 ? `<div class="skel-comment-reply">
+          <div class="skel-circle skel-comment-avatar-sm"></div>
+          <div class="skel-comment-body">
+            <div class="skel-line" style="height:11px;width:56px;margin:0"></div>
+            <div class="skel-line" style="height:12px;margin-right:20%;margin-top:3px"></div>
+          </div>
+        </div>` : ''}
+      </div>
     </div>`;
   }
   h += '</div>';
@@ -1019,12 +1048,13 @@ function skeletonComments(count) {
 // 6. Shelf skeleton
 function skeletonShelf() {
   let h = '<div class="skel-shelf">';
-  h += `<div class="skel-line" style="height:16px;margin-right:55%;margin-bottom:16px"></div>`;
+  h += `<div class="skel-shelf-tabs">${[64,64].map(w => `<div class="skel-pill" style="width:${w}px;height:28px"></div>`).join('')}</div>`;
   h += '<div class="skel-shelf-grid">';
   for (let i = 0; i < 6; i++) {
     h += `<div class="skel-shelf-item">
       <div class="skel-cover-shelf"></div>
       <div class="skel-shelf-name"></div>
+      <div class="skel-shelf-progress"></div>
     </div>`;
   }
   h += '</div></div>';
@@ -1034,26 +1064,18 @@ function skeletonShelf() {
 // 7. Author page skeleton
 function skeletonAuthor() {
   let h = '<div class="skel-author">';
-  h += `<div class="skel-author-header" style="position:relative">
-    <div class="skel-author-avatar-c"><div class="skel-circle" style="width:72px;height:72px;flex-shrink:0"></div></div>
+  h += `<div class="skel-author-header">
+    <div class="skel-author-avatar-c"></div>
     <div class="skel-author-info">
-      <div class="skel-line" style="height:24px;margin-right:35%"></div>
-      ${skelLine(45,11)}
+      <div class="skel-line" style="height:24px;margin-right:40%"></div>
+      <div class="skel-line" style="height:12px;margin-right:50%;margin-top:8px"></div>
+      <div class="skel-line" style="height:12px;margin-right:15%;margin-top:8px"></div>
+      <div class="skel-line" style="height:12px;margin-right:35%"></div>
     </div>
-    <div class="skel-pill skel-author-follow" style="width:70px;height:28px"></div>
+    <div class="skel-pill skel-author-follow"></div>
   </div>`;
   h += '<div class="skel-author-books">';
-  for (let i = 0; i < 3; i++) {
-    h += `<div class="skeleton-card">
-      <div class="skeleton-cover"></div>
-      <div class="skeleton-info">
-        <div class="skel-title-row"><div class="skel-line" style="margin-right:25%"></div><div class="skel-status-badge"></div></div>
-        ${skelLine(50,11)}
-        ${skelLine(8,11)}
-        ${skelLine(30,11)}
-      </div>
-    </div>`;
-  }
+  for (let i = 0; i < 3; i++) h += skelBookCard({ author: true });
   h += '</div></div>';
   return h;
 }

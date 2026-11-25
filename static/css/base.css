@@ -145,29 +145,31 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-pill.sm { height: 20px; }
 .skel-pill.lg { height: 32px; }
 .skel-rect { border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-.skel-cover { width: 72px; height: 100px; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; }
-.skel-cover-lg { width: 110px; height: 150px; border-radius: var(--radius); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; }
-.skel-cover-shelf { aspect-ratio: 3/4; width: 100%; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skel-cover { width: 72px; height: 100px; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; box-shadow: var(--shadow); }
+.skel-cover-lg { width: 110px; height: 150px; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; box-shadow: var(--shadow-md); }
+.skel-cover-shelf { aspect-ratio: 3/4; width: 120px; max-width: 100%; margin: 0 auto; border-radius: 4px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; box-shadow: var(--shadow); }
 
-/* Skeleton list container */
+/* Skeleton list container — matches .book-list */
 .skeleton-list { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; }
 
 /* 1. Continue Reading Card */
-.skel-continue-card { display: flex; align-items: center; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%); border-radius: var(--radius-md); padding: var(--sp-5); gap: 16px; margin-top: 12px; }
-.skel-continue-info { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.skel-continue-card { display: flex; align-items: center; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%); border-radius: var(--radius-md); padding: var(--sp-5); gap: 16px; margin-top: 12px; box-shadow: 0 4px 20px rgba(232,114,42,0.3); }
+.skel-continue-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .skel-continue-card .skel-line { background: linear-gradient(90deg, rgba(255,255,255,0.2) 25%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.2) 75%); background-size: 200% 100%; }
 .skel-continue-card .skel-circle { background: linear-gradient(90deg, rgba(255,255,255,0.2) 25%, rgba(255,255,255,0.35) 50%, rgba(255,255,255,0.2) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; border: 3px solid rgba(255,255,255,0.25); }
-.skel-continue-chev { width: 20px; height: 20px; flex-shrink: 0; border-radius: 4px; background: linear-gradient(90deg, rgba(255,255,255,0.15) 25%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.15) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skel-continue-chev { width: 20px; height: 20px; flex-shrink: 0; margin-left: 4px; border-radius: 4px; background: linear-gradient(90deg, rgba(255,255,255,0.15) 25%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.15) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
-/* 2. Discover Section */
-.skel-discover { display: flex; flex-direction: column; align-items: center; padding: var(--sp-6) 0 100px; gap: 16px; }
-.skel-discover-welcome { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: var(--sp-3) var(--sp-5) var(--sp-2); }
-.skel-discover-section { width: 100%; padding: 0 4px; margin-top: 20px; }
+/* 2. Discover Section — matches .home-discover */
+.skel-discover { padding: 8px 0 0; }
+.skel-discover-welcome { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--sp-3) var(--sp-5) var(--sp-2); }
+.skel-discover-section { margin-top: var(--sp-5); }
+.skel-discover-section-title { margin-bottom: 12px; padding: 0 4px; }
 .skel-discover-emoji { font-size: 40px; line-height: 1; margin-bottom: var(--sp-2); }
-.skel-discover-tags { display: flex; gap: 10px; width: 100%; justify-content: center; margin-top: 8px; }
-.skel-discover-tags .skel-pill { border: 1px solid var(--border); }
-.skel-discover-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; margin-top: 12px; }
-.skel-discover-card { border-radius: var(--radius-md); padding: var(--sp-4); display: flex; align-items: center; gap: var(--sp-3); }
+.skel-discover-tags { display: flex; gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding: 4px 4px 8px; }
+.skel-discover-tags::-webkit-scrollbar { display: none; }
+.skel-discover-tags .skel-pill { flex-shrink: 0; border: 1px solid var(--border); }
+.skel-discover-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.skel-discover-card { border-radius: var(--radius-md); padding: var(--sp-4); display: flex; align-items: center; gap: var(--sp-3); box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
 
 .skel-discover-card:nth-child(1) { background: linear-gradient(135deg, #ff9a56, #e8722a); }
 .skel-discover-card:nth-child(2) { background: linear-gradient(135deg, #f6b26b, #e07a3a); }
@@ -179,108 +181,143 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-discover-card:nth-child(8) { background: linear-gradient(135deg, #d97a8a, #b04a5e); }
 
 .skel-discover-card-icon { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,0.22); flex-shrink: 0; }
-.skel-discover-card-name { flex: 1; height: 15px; border-radius: 4px; background: rgba(255,255,255,0.3); }
-.skel-discover-card::after { content: '›'; font-size: 22px; opacity: 0.4; font-weight: 700; color: #fff; }
+.skel-discover-card-name { flex: 1; height: 15px; border-radius: 4px; background: rgba(255,255,255,0.3); min-width: 0; }
+.skel-discover-card::after { content: '›'; font-size: 22px; opacity: 0.7; font-weight: 700; color: #fff; }
 
-.skel-discover-tip { width: 100%; background: var(--accent-light); border-radius: var(--radius); padding: var(--sp-4); margin-top: var(--sp-8); display: flex; align-items: center; justify-content: center; }
+.skel-discover-tip { display: flex; align-items: center; justify-content: center; gap: var(--sp-2); width: 100%; background: var(--accent-light); border-radius: var(--radius); padding: var(--sp-4); margin-top: var(--sp-8); }
 .skel-discover-tip .skel-line { height: 14px; background: color-mix(in srgb, var(--accent) 20%, transparent); background-size: 200% 100%; }
 
-/* 3. Book Card */
+/* 3. Book Card — matches .book-card */
 .skeleton-card { display: flex; gap: 12px; background: var(--card-bg); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
-.skeleton-info { flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+.skeleton-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .skel-search-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
-.skel-title-row { display: flex; align-items: center; gap: 6px; }
-.skel-status-badge { width: 36px; height: 16px; border-radius: var(--radius-pill); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; display: inline-block; margin-left: 8px; vertical-align: middle; }
-.skel-tag-pill { width: 56px; height: 20px; border-radius: 6px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-.skel-meta-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.skel-search-tags { margin-top: -4px; }
+.skel-title-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; min-height: 22px; }
+.skel-title-row .skel-line { flex: 1; min-width: 0; margin: 0; }
+.skel-book-short { margin-bottom: 2px; }
+.skel-book-author { margin-bottom: 6px; }
+.skel-book-desc { height: 19px; margin-bottom: 0; }
+.skel-book-desc + .skel-book-desc { margin-top: 0; }
+.skel-status-badge { width: 36px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; }
+.skel-tag-pill { width: 48px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; }
+.skel-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
 .skel-meta-text { width: 28px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
-/* 4. Book Detail Header */
+/* 4. Book Detail — single card like .book-detail */
 .skel-detail { margin-top: 12px; }
-.skel-detail-header { display: flex; gap: 16px; padding: var(--sp-5); background: var(--card-bg); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
-.skel-detail-info { flex: 1; display: flex; flex-direction: column; gap: 8px; }
-.skel-detail-title-line { height: 26px; border-radius: 6px; }
-.skel-detail-alias-line { height: 16px; border-radius: 4px; }
-.skel-detail-author-line { height: 16px; border-radius: 4px; }
+.skel-detail-card { background: var(--card-bg); border-radius: var(--radius-md); overflow: hidden; box-shadow: var(--shadow-md); }
+.skel-detail-header { display: flex; gap: 16px; padding: var(--sp-5); }
+.skel-detail-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.skel-detail-title-line { height: 26px; border-radius: 6px; margin-bottom: 4px; }
+.skel-detail-alias-line { height: 12px; border-radius: 4px; margin-bottom: 4px; }
+.skel-detail-author-line { height: 14px; border-radius: 4px; margin-bottom: var(--sp-2); }
 .skel-detail-stat-line { height: 16px; border-radius: 3px; width: auto; min-width: 36px; flex-shrink: 0; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-.skel-detail-text-line { height: 22px; border-radius: 4px; }
-.skel-detail-meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.skel-detail-text-line { height: 14px; border-radius: 4px; }
+.skel-detail-meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-2); }
+.skel-detail-meta .skel-tag-pill { width: 52px; height: 20px; border-radius: 6px; }
 .skel-detail-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); flex-wrap: wrap; }
-.skel-detail-btn-primary { flex: 1 1 100%; }
-.skel-detail-btn-outline { flex: 1 1 0; min-width: 0; }
+.skel-detail-btn-primary { flex: 1 1 100%; height: 34px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, var(--badge-bg)) 25%, color-mix(in srgb, var(--accent) 75%, var(--border)) 50%, color-mix(in srgb, var(--accent) 55%, var(--badge-bg)) 75%); background-size: 200% 100%; }
+.skel-detail-btn-outline { flex: 1 1 0; min-width: 0; height: 34px; border: 1px solid var(--border); box-sizing: border-box; }
 
-/* 5. Description Section */
-.skel-detail-desc { display: flex; flex-direction: column; gap: 10px; padding: 0 var(--sp-5) var(--sp-4); background: var(--card-bg); border-radius: var(--radius-md); margin-top: 12px; box-shadow: var(--shadow); }
-.skel-detail-desc-toggle { display: flex; align-items: center; justify-content: center; background: var(--card-bg); border-radius: 0 0 var(--radius-md) var(--radius-md); margin-top: -2px; padding: var(--sp-2) var(--sp-5) var(--sp-3); min-height: 44px; }
+/* 5. Description inside detail card */
+.skel-detail-desc { display: flex; flex-direction: column; gap: 8px; padding: 0 var(--sp-5) var(--sp-4); }
+.skel-detail-desc-toggle { display: flex; align-items: center; justify-content: center; padding: var(--sp-2) var(--sp-5) var(--sp-3); min-height: 44px; }
 .skel-detail-desc-toggle .skel-line { background: color-mix(in srgb, var(--accent) 20%, transparent); background-size: 200% 100%; }
 
-/* 6. Chapter List */
+/* 6. Chapter List — matches .chapter-section */
 .skel-chapter-section { background: var(--card-bg); border-radius: var(--radius-md); margin-top: var(--sp-3); box-shadow: var(--shadow); overflow: hidden; }
-.skel-chapter-header { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); }
+.skel-chapter-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: var(--sp-3) var(--sp-4) var(--sp-2); border-bottom: 1px solid var(--border); }
 .skel-chapter-title { width: 40%; height: 16px; border-radius: 4px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-.skel-chapter-search { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-.skel-chapter-list { display: flex; flex-direction: column; }
-.skel-chapter-item { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); }
+.skel-chapter-search { width: 120px; height: 28px; border-radius: 14px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skel-chapter-list { display: flex; flex-direction: column; max-height: 55vh; overflow: hidden; padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+.skel-chapter-item { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border); }
 .skel-chapter-item:last-child { border-bottom: none; }
-.skel-chapter-name { width: auto; flex: 1; min-width: 0; height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-.skel-chapter-time { width: 48px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; margin-left: 12px; }
+.skel-chapter-name { width: auto; flex: 1; min-width: 0; height: 21px; border-radius: 4px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skel-chapter-time { width: 48px; height: 14px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; margin-left: 8px; }
 
 /* 7. Detail Sticky Bottom */
 .skel-detail-sticky-spacer { height: calc(64px + env(safe-area-inset-bottom)); }
-.skel-detail-sticky { position: fixed; bottom: 0; left: 0; right: 0; background: color-mix(in srgb, var(--card-bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); z-index: 50; max-width: 720px; margin: 0 auto; box-shadow: 0 -4px 16px rgba(0,0,0,0.06); }
-.skel-detail-sticky .skel-pill { height: 44px; }
+.skel-detail-sticky { position: fixed; bottom: 0; left: 0; right: 0; background: color-mix(in srgb, var(--card-bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-top: 1px solid var(--border); padding: var(--sp-2) var(--sp-4) calc(var(--sp-2) + env(safe-area-inset-bottom)); z-index: 90; max-width: 720px; margin: 0 auto; box-shadow: 0 -4px 16px rgba(0,0,0,0.06); }
+.skel-detail-sticky-btn { width: 100%; height: 44px; background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, var(--badge-bg)) 25%, color-mix(in srgb, var(--accent) 80%, var(--border)) 50%, color-mix(in srgb, var(--accent) 55%, var(--badge-bg)) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
-/* 8. Author Page Header */
+/* 8. Author Page Header — matches .author-page */
 .skel-author { padding: 0; margin: 0 -14px; }
-.skel-author-header { background: linear-gradient(135deg, #1c1a19 0%, #3a2a1f 50%, #c85d1e 100%); padding: var(--sp-8) var(--sp-4) var(--sp-6); display: flex; align-items: flex-start; gap: var(--sp-4); margin-bottom: var(--sp-3); min-height: 130px; }
-.skel-author-avatar-c { flex-shrink: 0; width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; border: 3px solid rgba(255,255,255,0.2); }
-.skel-author-avatar-c .skel-circle { background: linear-gradient(90deg, rgba(255,255,255,0.08) 25%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.08) 75%); background-size: 200% 100%; }
-.skel-author-info { flex: 1; display: flex; flex-direction: column; gap: 10px; padding-top: 2px; padding-right: 84px; }
-.skel-author-follow { position: absolute; right: var(--sp-4); top: var(--sp-8); width: 70px; height: 28px; border-radius: var(--radius-pill); background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.skel-author-header { position: relative; background: linear-gradient(135deg, #1c1a19 0%, #3a2a1f 50%, #c85d1e 100%); padding: var(--sp-8) var(--sp-4) var(--sp-6); display: flex; align-items: flex-start; gap: var(--sp-4); margin-bottom: var(--sp-3); box-shadow: var(--shadow-md); }
+.skel-author-avatar-c { flex-shrink: 0; width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(90deg, rgba(255,255,255,0.08) 25%, rgba(255,255,255,0.18) 50%, rgba(255,255,255,0.08) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; border: 3px solid rgba(255,255,255,0.2); overflow: hidden; }
+.skel-author-info { flex: 1; min-width: 0; padding-top: 2px; padding-right: 84px; }
+.skel-author-info .skel-line { background: linear-gradient(90deg, rgba(255,255,255,0.15) 25%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0.15) 75%); background-size: 200% 100%; }
+.skel-author-follow { position: absolute; right: var(--sp-4); top: var(--sp-8); width: 70px; height: 28px; border-radius: var(--radius-pill); background: linear-gradient(90deg, rgba(232,114,42,0.55) 25%, rgba(232,114,42,0.85) 50%, rgba(232,114,42,0.55) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 
-/* 9. Author Books List */
-.skel-author-books { display: flex; flex-direction: column; padding: 0 var(--sp-4) var(--sp-5); }
-.skel-author-book-item { display: flex; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); background: var(--card-bg); }
-.skel-author-book-item:last-child { border-bottom: none; }
+/* 9. Author Books List — transparent cards like .author-page .book-card */
+.skel-author-books { display: flex; flex-direction: column; padding: 0 var(--sp-4) var(--sp-5); gap: 0; }
+.skel-author-books .skel-author-book { background: transparent; box-shadow: none; border-radius: 0; border-bottom: 1px solid var(--border); padding: 16px 0; }
+.skel-author-books .skel-author-book:last-child { border-bottom: none; }
 
-/* 10. Comments Section */
-.skel-comments { background: var(--card-bg); border-radius: var(--radius-md); padding: var(--sp-4); margin-top: var(--sp-3); }
-.skel-comments-title { width: 35%; height: 18px; border-radius: 5px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; margin-bottom: 16px; }
-.skel-comment-item { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+/* 10. Comments Section — matches .comments-section + avatar row */
+.skel-comments { padding: var(--sp-4); width: 100%; box-sizing: border-box; }
+.skel-comments-title { width: 140px; max-width: 50%; height: 15px; border-radius: 4px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; margin-bottom: var(--sp-3); padding-bottom: var(--sp-2); border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); box-sizing: content-box; }
+.skel-comment-item { display: flex; gap: 12px; padding: var(--sp-3) 0; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); width: 100%; box-sizing: border-box; }
+.skel-comment-item:first-of-type { padding-top: 0; }
 .skel-comment-item:last-child { border-bottom: none; }
+.skel-comment-avatar { width: 36px; height: 36px; flex-shrink: 0; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+.skel-comment-avatar-sm { width: 24px; height: 24px; flex-shrink: 0; }
+.skel-comment-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.skel-comment-reply { display: flex; gap: 8px; margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: color-mix(in srgb, var(--badge-bg) 70%, transparent); border-radius: var(--radius-sm); }
 .skel-comment-user { width: 25%; height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 .skel-comment-text { height: 14px; border-radius: 4px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 .skel-comment-text.w90 { width: 90%; }
 .skel-comment-text.w70 { width: 70%; }
 .skel-comment-time { width: 40px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; margin-top: 4px; }
 
-/* 11. Shelf Grid */
-.skel-shelf { margin-top: 20px; }
-.skel-shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 10px; padding: 12px 0; }
-.skel-shelf-item { display: flex; flex-direction: column; gap: 8px; }
+/* 11. Shelf Grid — matches .shelf-grid */
+.skel-shelf { margin-top: var(--sp-5); }
+.skel-shelf-tabs { display: flex; gap: 6px; margin-bottom: var(--sp-4); }
+.skel-shelf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); grid-row-gap: 20px; grid-column-gap: 60px; align-items: start; }
+.skel-shelf-item { display: flex; flex-direction: column; align-items: center; min-width: 0; text-align: center; }
 .skel-shelf-cover { aspect-ratio: 3/4; width: 100%; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-.skel-shelf-name { width: auto; flex: 1; height: 12px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
-.skel-shelf-progress { width: 40%; height: 8px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skel-shelf-name { width: 80%; height: 14px; border-radius: 3px; margin-top: 8px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skel-shelf-progress { width: 55%; height: 12px; border-radius: 3px; margin-top: 2px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
-/* 12. Reader Content */
-.skel-reader { display: flex; flex-direction: column; padding: 24px 16px; gap: 20px; background: var(--reader-bg); min-height: 80vh; }
-.skel-reader-header { display: flex; flex-direction: column; gap: 6px; padding: 32px 24px 24px; max-width: 680px; margin: 0 auto; width: 100%; }
-.skel-reader-header .skel-line { margin-left: auto; margin-right: auto; }
-.skel-reader-para { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 680px; margin: 0 auto; padding: 0 20px; }
+/* 12. Reader Content — matches .paginated-reader chrome */
+.skel-reader {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  height: 100vh; height: 100dvh;
+  background: var(--reader-bg); z-index: 200;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.skel-reader-header {
+  display: flex; align-items: center; padding: var(--sp-2) var(--sp-4); gap: var(--sp-2);
+  background: var(--reader-bg); border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.skel-reader-back { width: 44px; height: 44px; border-radius: 50%; margin: 0; flex: none; }
+.skel-reader-title-wrap { flex: 1; min-width: 0; display: flex; justify-content: center; }
+.skel-reader-title { width: 40%; max-width: 200px; height: 14px; margin: 0; }
+.skel-reader-settings { width: 36px; height: 36px; border-radius: 8px; margin: 0; flex: none; background: var(--badge-bg); }
+.skel-reader-body {
+  flex: 1; overflow: hidden;
+  padding: 12px max(14px, calc((100% - 680px) / 2));
+  display: flex; flex-direction: column; gap: 0.8em;
+  font-size: var(--reader-font-size, 17px);
+  line-height: var(--reader-line-height, 1.85);
+}
+.skel-reader-para { display: flex; flex-direction: column; width: 100%; padding-left: 2em; gap: 0.55em; margin-bottom: 0.8em; }
+.skel-reader-para .skel-line { height: 0.95em; border-radius: 3px; }
+.skel-reader-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-2) var(--sp-5) calc(var(--sp-3) + env(safe-area-inset-bottom));
+  background: var(--reader-bg); flex-shrink: 0;
+}
 
 /* Staggered animation delays for visual effect */
 .skeleton-list .skeleton-card:nth-child(2) .skel-line,
-.skeleton-list .skeleton-card:nth-child(2) .skel-cover,
-.skeleton-list .skeleton-card:nth-child(2) .skel-cover-lg { animation-delay: 0.15s; }
+.skeleton-list .skeleton-card:nth-child(2) .skel-cover { animation-delay: 0.15s; }
 .skeleton-list .skeleton-card:nth-child(3) .skel-line,
-.skeleton-list .skeleton-card:nth-child(3) .skel-cover,
-.skeleton-list .skeleton-card:nth-child(3) .skel-cover-lg { animation-delay: 0.3s; }
+.skeleton-list .skeleton-card:nth-child(3) .skel-cover { animation-delay: 0.3s; }
 .skeleton-list .skeleton-card:nth-child(4) .skel-line,
-.skeleton-list .skeleton-card:nth-child(4) .skel-cover,
-.skeleton-list .skeleton-card:nth-child(4) .skel-cover-lg { animation-delay: 0.45s; }
+.skeleton-list .skeleton-card:nth-child(4) .skel-cover { animation-delay: 0.45s; }
 .skeleton-list .skeleton-card:nth-child(5) .skel-line,
-.skeleton-list .skeleton-card:nth-child(5) .skel-cover,
-.skeleton-list .skeleton-card:nth-child(5) .skel-cover-lg { animation-delay: 0.6s; }
+.skeleton-list .skeleton-card:nth-child(5) .skel-cover { animation-delay: 0.6s; }
 
 .skel-chapter-item:nth-child(2) .skel-chapter-name,
 .skel-chapter-item:nth-child(2) .skel-chapter-time { animation-delay: 0.1s; }
@@ -296,25 +333,29 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-chapter-item:nth-child(7) .skel-chapter-time { animation-delay: 0.6s; }
 .skel-chapter-item:nth-child(8) .skel-chapter-name,
 .skel-chapter-item:nth-child(8) .skel-chapter-time { animation-delay: 0.7s; }
-.skel-chapter-item:nth-child(9) .skel-chapter-name,
-.skel-chapter-item:nth-child(9) .skel-chapter-time { animation-delay: 0.8s; }
-.skel-chapter-item:nth-child(10) .skel-chapter-name,
-.skel-chapter-item:nth-child(10) .skel-chapter-time { animation-delay: 0.9s; }
 
-.skel-shelf-item:nth-child(2) .skel-shelf-cover,
-.skel-shelf-item:nth-child(2) .skel-shelf-name { animation-delay: 0.15s; }
-.skel-shelf-item:nth-child(3) .skel-shelf-cover,
-.skel-shelf-item:nth-child(3) .skel-shelf-name { animation-delay: 0.3s; }
-.skel-shelf-item:nth-child(4) .skel-shelf-cover,
-.skel-shelf-item:nth-child(4) .skel-shelf-name { animation-delay: 0.45s; }
-.skel-shelf-item:nth-child(5) .skel-shelf-cover,
-.skel-shelf-item:nth-child(5) .skel-shelf-name { animation-delay: 0.6s; }
-.skel-shelf-item:nth-child(6) .skel-shelf-cover,
-.skel-shelf-item:nth-child(6) .skel-shelf-name { animation-delay: 0.75s; }
+.skel-shelf-item:nth-child(2) .skel-cover-shelf,
+.skel-shelf-item:nth-child(2) .skel-shelf-name,
+.skel-shelf-item:nth-child(2) .skel-shelf-progress { animation-delay: 0.15s; }
+.skel-shelf-item:nth-child(3) .skel-cover-shelf,
+.skel-shelf-item:nth-child(3) .skel-shelf-name,
+.skel-shelf-item:nth-child(3) .skel-shelf-progress { animation-delay: 0.3s; }
+.skel-shelf-item:nth-child(4) .skel-cover-shelf,
+.skel-shelf-item:nth-child(4) .skel-shelf-name,
+.skel-shelf-item:nth-child(4) .skel-shelf-progress { animation-delay: 0.45s; }
+.skel-shelf-item:nth-child(5) .skel-cover-shelf,
+.skel-shelf-item:nth-child(5) .skel-shelf-name,
+.skel-shelf-item:nth-child(5) .skel-shelf-progress { animation-delay: 0.6s; }
+.skel-shelf-item:nth-child(6) .skel-cover-shelf,
+.skel-shelf-item:nth-child(6) .skel-shelf-name,
+.skel-shelf-item:nth-child(6) .skel-shelf-progress { animation-delay: 0.75s; }
 
-.skel-comment-item:nth-child(2) { animation-delay: 0.15s; }
-.skel-comment-item:nth-child(3) { animation-delay: 0.3s; }
-.skel-comment-item:nth-child(4) { animation-delay: 0.45s; }
+.skel-comment-item:nth-child(2) .skel-line,
+.skel-comment-item:nth-child(2) .skel-circle { animation-delay: 0.15s; }
+.skel-comment-item:nth-child(3) .skel-line,
+.skel-comment-item:nth-child(3) .skel-circle { animation-delay: 0.3s; }
+.skel-comment-item:nth-child(4) .skel-line,
+.skel-comment-item:nth-child(4) .skel-circle { animation-delay: 0.45s; }
 
 .skel-reader-para:nth-child(2) .skel-line { animation-delay: 0.1s; }
 .skel-reader-para:nth-child(3) .skel-line { animation-delay: 0.2s; }
@@ -324,79 +365,52 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-reader-para:nth-child(7) .skel-line { animation-delay: 0.6s; }
 .skel-reader-para:nth-child(8) .skel-line { animation-delay: 0.7s; }
 
-/* Detail skeleton animations */
-.skel-detail-header .skel-line,
-.skel-detail-header .skel-pill,
-.skel-detail-header .skel-cover-lg,
-.skel-detail-header .skel-tag-pill { animation-delay: 0s; }
 .skel-detail-desc .skel-line:nth-child(2) { animation-delay: 0.1s; }
 .skel-detail-desc .skel-line:nth-child(3) { animation-delay: 0.2s; }
-.skel-chapter-item:nth-child(1) .skel-line { animation-delay: 0s; }
 
-/* Continue card + discover stagger */
-.skel-continue-card .skel-line,
-.skel-continue-card .skel-circle { animation-delay: 0s; }
 .skel-discover-welcome .skel-line:nth-child(2) { animation-delay: 0.1s; }
 .skel-discover-welcome .skel-line:nth-child(3) { animation-delay: 0.2s; }
 
-/* Author page stagger */
-.skel-author-header .skel-line,
-.skel-author-header .skel-circle,
-.skel-author-header .skel-pill { animation-delay: 0s; }
-.skel-author-books .skeleton-card:nth-child(2) .skel-line,
-.skel-author-books .skeleton-card:nth-child(2) .skeleton-cover { animation-delay: 0.15s; }
-.skel-author-books .skeleton-card:nth-child(3) .skel-line,
-.skel-author-books .skeleton-card:nth-child(3) .skeleton-cover { animation-delay: 0.3s; }
+.skel-author-books .skel-author-book:nth-child(2) .skel-line,
+.skel-author-books .skel-author-book:nth-child(2) .skel-cover { animation-delay: 0.15s; }
+.skel-author-books .skel-author-book:nth-child(3) .skel-line,
+.skel-author-books .skel-author-book:nth-child(3) .skel-cover { animation-delay: 0.3s; }
 
 /* ==================== Mobile responsive (skeleton) ==================== */
 @media (max-width: 480px) {
   /* Detail header: stack vertically like real UI */
   .skel-detail-header { flex-direction: column; align-items: center; text-align: center; }
   .skel-cover-lg { width: 100px; height: 138px; }
-  .skel-detail-info { align-items: center; }
+  .skel-detail-info { align-items: center; width: 100%; }
   .skel-detail-meta { justify-content: center; }
-  .skel-detail-actions { justify-content: center; }
-
-  /* Detail desc: narrower padding */
-  .skel-detail-desc { padding: 12px; }
+  .skel-detail-actions { justify-content: center; width: 100%; }
 
   /* Continue card: compact padding */
   .skel-continue-card { padding: 14px 16px; gap: 12px; }
   .skel-continue-card .skel-circle { width: 44px; height: 44px; }
 
-  /* Discover: scrollable tags, compact grid */
-  .skel-discover-tags { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; justify-content: flex-start; padding-bottom: 4px; }
-  .skel-discover-tags::-webkit-scrollbar { display: none; }
-  .skel-discover-tags .skel-pill { flex-shrink: 0; }
+  /* Discover: compact cards */
   .skel-discover-grid { gap: 10px; }
   .skel-discover-card { padding: 12px; gap: 10px; }
-  .skel-discover-card .skel-circle { width: 36px; height: 36px; }
+  .skel-discover-card-icon { width: 36px; height: 36px; }
 
-  /* Reader: tighter padding matching .page-page */
-  .skel-reader { padding: 16px 18px; }
-  .skel-reader-header { padding: 24px 16px 16px; }
-  .skel-reader-para { padding: 0 12px; }
+  /* Reader body: match .page-page mobile padding */
+  .skel-reader-body { padding: 10px 14px; gap: 14px; }
 
-  /* Author header: stack on very small screens */
-  .skel-author-header { flex-wrap: wrap; }
-  .skel-author-header .skel-pill { position: static; margin-top: 4px; }
-
-  /* Chapter items: compact padding */
+  /* Chapter items */
   .skel-chapter-item { padding: 12px 14px; }
   .skel-chapter-header { padding: 12px 14px; }
 
-  /* Shelf grid: slightly smaller gap */
-  .skel-shelf-grid { gap: 10px; }
+  /* Shelf grid */
+  .skel-shelf-grid { grid-column-gap: 24px; grid-row-gap: 16px; }
 
-  /* Comments: compact padding */
-  .skel-comments { padding: 12px; }
-
-  /* Search controls: allow wrapping */
+  /* Search controls */
   .skel-search-controls { gap: 4px; }
   .skel-search-controls .skel-pill { flex-shrink: 0; }
 
-  /* Book cards: compact on small screens */
+  /* Book cards */
   .skeleton-card { padding: 10px; gap: 10px; }
+  .skel-author-books .skel-author-book { padding: 14px 0; }
 }
 
 /* Tablet / mid-range adjustments */
@@ -405,4 +419,5 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
   .skel-cover-lg { width: 100px; height: 138px; }
   .skel-discover-grid { gap: 10px; }
   .skel-continue-card { padding: 14px 16px; }
+  .skel-shelf-grid { grid-column-gap: 36px; }
 }
