@@ -193,15 +193,16 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-search-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
 .skel-search-tags { margin-top: -4px; }
 .skel-title-row { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; min-height: 22px; }
-.skel-title-row .skel-line { flex: 1; min-width: 0; margin: 0; }
-.skel-book-short { margin-bottom: 2px; }
-.skel-book-author { margin-bottom: 6px; }
+.skel-title-row .skel-line { min-width: 0; margin: 0; flex: none; }
+.skel-book-title { height: 15px; }
+.skel-book-short { height: 11px; margin-bottom: 2px; }
+.skel-book-author { height: 12px; margin-bottom: 6px; }
 .skel-book-desc { height: 19px; margin-bottom: 0; }
 .skel-book-desc + .skel-book-desc { margin-top: 0; }
 .skel-status-badge { width: 36px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; }
 .skel-tag-pill { width: 48px; height: 16px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; flex-shrink: 0; }
 .skel-meta-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
-.skel-meta-text { width: 28px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+.skel-meta-text { width: 28px; height: 10px; margin: 0; flex: none; border-radius: 3px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
 /* 4. Book Detail — single card like .book-detail */
 .skel-detail { margin-top: 12px; }
@@ -278,13 +279,8 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-shelf-name { width: 80%; height: 14px; border-radius: 3px; margin-top: 8px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 .skel-shelf-progress { width: 55%; height: 12px; border-radius: 3px; margin-top: 2px; background: linear-gradient(90deg, var(--badge-bg) 25%, var(--border) 50%, var(--badge-bg) 75%); background-size: 200% 100%; animation: shimmer 1.4s ease-in-out infinite; }
 
-/* 12. Reader Content — matches .paginated-reader chrome */
-.skel-reader {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  height: 100vh; height: 100dvh;
-  background: var(--reader-bg); z-index: 200;
-  display: flex; flex-direction: column; overflow: hidden;
-}
+/* 12. Reader Content */
+.skel-reader { background: var(--reader-bg); }
 .skel-reader-header {
   display: flex; align-items: center; padding: var(--sp-2) var(--sp-4); gap: var(--sp-2);
   background: var(--reader-bg); border-bottom: 1px solid var(--border);
@@ -295,20 +291,50 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-reader-title { width: 40%; max-width: 200px; height: 14px; margin: 0; }
 .skel-reader-settings { width: 36px; height: 36px; border-radius: 8px; margin: 0; flex: none; background: var(--badge-bg); }
 .skel-reader-body {
-  flex: 1; overflow: hidden;
-  padding: 12px max(14px, calc((100% - 680px) / 2));
-  display: flex; flex-direction: column; gap: 0.8em;
+  display: flex; flex-direction: column; gap: 0;
   font-size: var(--reader-font-size, 17px);
   line-height: var(--reader-line-height, 1.85);
 }
 .skel-reader-para { display: flex; flex-direction: column; width: 100%; gap: 0.55em; margin-bottom: 0.8em; }
-/* Match .page-page p { text-indent: 2em } — only first line */
-.skel-reader-para .skel-line:first-child { margin-left: 2em; width: auto; }
+/* Match text-indent: 2em — only first line */
+.skel-reader-para .skel-line:first-child { margin-left: 2em; width: auto !important; max-width: calc(100% - 2em); }
 .skel-reader-para .skel-line { height: 0.95em; border-radius: 3px; }
+
+/* Page / no-anim — fixed chrome like .paginated-reader */
+.skel-reader-page {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  height: 100vh; height: 100dvh; z-index: 200;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.skel-reader-page .skel-reader-body {
+  flex: 1; overflow: hidden;
+  padding: 12px max(14px, calc((100% - 680px) / 2));
+}
 .skel-reader-footer {
   display: flex; align-items: center; justify-content: space-between;
   padding: var(--sp-2) var(--sp-5) calc(var(--sp-3) + env(safe-area-inset-bottom));
   background: var(--reader-bg); flex-shrink: 0;
+}
+
+/* Scroll mode — document flow like .scroll-reader */
+.skel-reader-scroll {
+  min-height: 100vh;
+  padding-bottom: calc(80px + env(safe-area-inset-bottom));
+}
+.skel-reader-scroll .skel-reader-header { position: sticky; top: 0; z-index: 10; }
+.skel-reader-chapter-info { text-align: center; padding: var(--sp-5) var(--sp-6) var(--sp-3); }
+.skel-reader-scroll-body {
+  padding: 0 var(--sp-5);
+  max-width: 680px; margin: 0 auto; width: 100%; box-sizing: border-box;
+}
+.skel-reader-scroll-body .skel-reader-para { margin-bottom: 1.2em; }
+.skel-reader-nav {
+  display: flex; padding: var(--sp-4) var(--sp-5) var(--sp-2); gap: var(--sp-3);
+  max-width: 680px; margin: 0 auto; width: 100%; box-sizing: border-box;
+}
+.skel-reader-nav-accent {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 55%, var(--badge-bg)) 25%, color-mix(in srgb, var(--accent) 80%, var(--border)) 50%, color-mix(in srgb, var(--accent) 55%, var(--badge-bg)) 75%);
+  background-size: 200% 100%;
 }
 
 /* Staggered animation delays for visual effect */
@@ -404,8 +430,8 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
   .skel-detail-meta { justify-content: center; }
   .skel-detail-actions { justify-content: center; width: 100%; }
 
-  /* Effective .page-page padding from components.css */
-  .skel-reader-body { padding: 16px 18px; }
+  /* Effective .page-page padding from components.css (page mode only) */
+  .skel-reader-page .skel-reader-body { padding: 16px 18px; }
 
   .skel-search-controls .skel-pill { flex-shrink: 0; }
   .skel-discover-tags { justify-content: flex-start; }

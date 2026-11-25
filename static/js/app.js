@@ -872,18 +872,18 @@ function skelPill(w) { return `<div class="skel-pill" style="width:${w}px"></div
 function skelBookCard(opts) {
   const author = opts && opts.author;
   const cls = author ? 'skeleton-card skel-author-book' : 'skeleton-card';
-  // Mirrors .book-card: title+badge, author/score, 2-line desc, meta tags
+  // Width-only inline styles — heights come from CSS (.skel-book-desc etc.)
   return `<div class="${cls}">
     <div class="skel-cover"></div>
     <div class="skeleton-info">
-      <div class="skel-title-row"><div class="skel-line" style="height:15px;margin-right:22%"></div><div class="skel-status-badge"></div></div>
-      ${author ? `<div class="skel-line skel-book-short" style="height:11px;margin-right:40%"></div>` : ''}
-      <div class="skel-line skel-book-author" style="height:12px;margin-right:${author ? 45 : 50}%"></div>
-      <div class="skel-line skel-book-desc" style="height:12px;margin-right:4%"></div>
-      <div class="skel-line skel-book-desc" style="height:12px;margin-right:38%"></div>
+      <div class="skel-title-row"><div class="skel-line skel-book-title" style="width:78%"></div><div class="skel-status-badge"></div></div>
+      ${author ? `<div class="skel-line skel-book-short" style="width:60%"></div>` : ''}
+      <div class="skel-line skel-book-author" style="width:${author ? 55 : 50}%"></div>
+      <div class="skel-line skel-book-desc" style="width:96%"></div>
+      <div class="skel-line skel-book-desc" style="width:62%"></div>
       <div class="skel-meta-row">
-        <div class="skel-line" style="width:34px;height:10px;margin:0;flex:none"></div>
-        <div class="skel-line" style="width:48px;height:10px;margin:0;flex:none"></div>
+        <div class="skel-line skel-meta-text" style="width:34px"></div>
+        <div class="skel-line skel-meta-text" style="width:48px"></div>
         <div class="skel-tag-pill"></div>
         <div class="skel-tag-pill" style="width:36px"></div>
       </div>
@@ -992,31 +992,52 @@ function skeletonDetail() {
   return h;
 }
 
-// 4. Reader skeleton — mirrors .paginated-reader header + page body + footer
+function skelReaderParas(count) {
+  let h = '';
+  for (let i = 0; i < count; i++) {
+    const ends = [12, 28, 8, 35, 18, 45, 22, 55, 15, 40][i % 10];
+    const lines = i < 3 ? 3 : 2;
+    h += '<div class="skel-reader-para">';
+    for (let j = 0; j < lines; j++) {
+      const w = j === lines - 1 ? (100 - ends) : 100;
+      h += `<div class="skel-line" style="width:${w}%"></div>`;
+    }
+    h += '</div>';
+  }
+  return h;
+}
+
+// 4. Reader skeleton — mode-aware (scroll vs paginated)
 function skeletonReader() {
-  let h = '<div class="skel-reader">';
-  h += `<div class="skel-reader-header">
+  const header = `<div class="skel-reader-header">
     <div class="skel-line skel-reader-back"></div>
     <div class="skel-reader-title-wrap"><div class="skel-line skel-reader-title"></div></div>
     <div class="skel-line skel-reader-settings"></div>
   </div>`;
-  h += '<div class="skel-reader-body">';
-  for (let i = 0; i < 8; i++) {
-    const ends = [12, 28, 8, 35, 18, 45, 22, 55][i];
-    const lines = i < 3 ? 3 : (i < 6 ? 2 : 2);
-    h += '<div class="skel-reader-para">';
-    for (let j = 0; j < lines; j++) {
-      const mr = j === lines - 1 ? ends : 0;
-      h += `<div class="skel-line"${mr ? ` style="margin-right:${mr}%"` : ''}></div>`;
-    }
-    h += '</div>';
+
+  // Scroll mode: document flow like .scroll-reader (not fixed viewport)
+  if (typeof getReadMode === 'function' && getReadMode() === 'scroll') {
+    return `<div class="skel-reader skel-reader-scroll">
+      ${header}
+      <div class="skel-reader-chapter-info"><div class="skel-line" style="width:56%;height:12px;margin:0 auto"></div></div>
+      <div class="skel-reader-body skel-reader-scroll-body">${skelReaderParas(10)}</div>
+      <div class="skel-reader-nav">
+        <div class="skel-pill" style="flex:1;height:40px"></div>
+        <div class="skel-pill" style="flex:1;height:40px"></div>
+        <div class="skel-pill skel-reader-nav-accent" style="flex:1;height:40px"></div>
+      </div>
+    </div>`;
   }
-  h += `</div>
-  <div class="skel-reader-footer">
-    <div class="skel-line" style="width:42%;height:11px;margin:0"></div>
-    <div class="skel-line" style="width:64px;height:11px;margin:0;flex:none"></div>
-  </div></div>`;
-  return h;
+
+  // Page / no-anim: fixed full-screen like .paginated-reader
+  return `<div class="skel-reader skel-reader-page">
+    ${header}
+    <div class="skel-reader-body">${skelReaderParas(8)}</div>
+    <div class="skel-reader-footer">
+      <div class="skel-line" style="width:42%;height:11px;margin:0"></div>
+      <div class="skel-line" style="width:64px;height:11px;margin:0;flex:none"></div>
+    </div>
+  </div>`;
 }
 
 // 5. Comments skeleton — mirrors avatar + body row layout
