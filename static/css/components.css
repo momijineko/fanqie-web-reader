@@ -24,7 +24,17 @@
 /* Comment text */
 .comment-text { font-size: var(--fs-base); margin-top: 2px; color: var(--text); line-height: var(--lh-relaxed); word-break: break-word; }
 
-/* Images */
+/* Fanqie sticker / emoticon (replaces `[哭]` placeholders) */
+.comment-stickers { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; margin-top: 4px; }
+.comment-sticker {
+  height: 64px; width: auto; max-width: 96px;
+  object-fit: contain; display: block;
+  background: transparent; border-radius: 0;
+  pointer-events: none; user-select: none;
+}
+.comment-reply .comment-sticker { height: 48px; max-width: 72px; }
+
+/* Images (photo attachments, not stickers) */
 .comment-images { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; margin-top: var(--sp-2); max-width: 280px; }
 .comment-images.single-img { grid-template-columns: 1fr; max-width: 200px; }
 .comment-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-sm); cursor: zoom-in; transition: transform 0.2s var(--ease-out), box-shadow 0.2s ease; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }

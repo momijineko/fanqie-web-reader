@@ -1221,7 +1221,7 @@ function renderParaReplyItems(replies) {
     const rcAvatarHtml = rcAvatar
       ? `<img class="comment-avatar comment-avatar-sm" src="${safeImgUrl(rcAvatar)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'comment-avatar comment-avatar-sm comment-avatar-placeholder\\'>${escapeHtml(rcUser.charAt(0))}</div>'">`
       : `<div class="comment-avatar comment-avatar-sm comment-avatar-placeholder">${escapeHtml(rcUser.charAt(0))}</div>`;
-    html += `<div class="comment-item">${rcAvatarHtml}<div class="comment-body"><div class="comment-user">${rcUserLine}</div><div class="comment-text">${escapeHtml(rcText)}</div></div></div>`;
+    html += `<div class="comment-item">${rcAvatarHtml}<div class="comment-body"><div class="comment-user">${rcUserLine}</div>${renderCommentContentHtml(rcText, rc.stickers, rc.images)}</div></div>`;
   }
   return html;
 }
@@ -1307,17 +1307,11 @@ async function loadParaCommentList(chapterId, paraIdx, bookId) {
       const text = c.content || c.text || '';
       const time = c.create_time || c.create_timestamp || 0;
       const digg = c.digg_count || 0;
-      const imgs = c.images || [];
       const replyCount = parseInt(c.reply_count || 0, 10) || 0;
       const commentId = c.comment_id || '';
       const avatarHtml = avatar ? `<img class="comment-avatar" src="${safeImgUrl(avatar)}" alt="" loading="lazy" onerror="this.outerHTML='<div class=\\'comment-avatar comment-avatar-placeholder\\'>${escapeHtml(user.charAt(0))}</div>'">` : `<div class="comment-avatar comment-avatar-placeholder">${escapeHtml(user.charAt(0))}</div>`;
-      html += `<div class="comment-item">${avatarHtml}<div class="comment-body"><div class="comment-user">${escapeHtml(user)}</div><div class="comment-text">${escapeHtml(text)}</div>`;
-      if (imgs.length > 0) {
-        const imgGridClass = imgs.length === 1 ? 'comment-images single-img' : 'comment-images';
-        html += `<div class="${imgGridClass}">`;
-        for (const src of imgs) html += `<img class="comment-img" src="${safeImgUrl(src)}" alt="评论图片" loading="lazy" onclick="openImageViewer(this.src)">`;
-        html += '</div>';
-      }
+      html += `<div class="comment-item">${avatarHtml}<div class="comment-body"><div class="comment-user">${escapeHtml(user)}</div>`;
+      html += renderCommentContentHtml(text, c.stickers, c.images);
       const timeStr = time ? formatTime(time) : '';
       const diggStr = digg > 0 ? `<span class="comment-digg">${digg}</span>` : '';
       if (timeStr || diggStr) {

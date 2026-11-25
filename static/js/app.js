@@ -29,6 +29,64 @@ function safeImgUrl(u) {
   } catch(e) {}
   return escapeAttr(s);
 }
+
+/** True when comment text is only Fanqie sticker placeholders like `[哭][震惊]`. */
+function isStickerPlaceholderText(text) {
+  const s = String(text || '').replace(/\s+/g, '');
+  return s.length > 0 && /^(?:\[[^\[\]]+\])+$/.test(s);
+}
+
+/**
+ * Render comment/reply body: stickers inline (hide `[哭]` placeholders),
+ * plus optional photo attachments. Accepts new `stickers` field or legacy
+ * `images` + placeholder-only text.
+ */
+function renderCommentContentHtml(text, stickers, images) {
+  let stickerList = Array.isArray(stickers) ? stickers.slice() : [];
+  let imgs = Array.isArray(images) ? images.slice() : [];
+  const rawText = String(text || '');
+
+  if (!stickerList.length && imgs.length && isStickerPlaceholderText(rawText)) {
+    const names = [...rawText.matchAll(/\[([^\[\]]+)\]/g)].map(m => m[1]);
+    stickerList = imgs.map((src, i) => ({
+      url: typeof src === 'string' ? src : (src && src.url) || '',
+      name: names[i] || names[0] || '表情',
+    }));
+    imgs = [];
+  }
+
+  let html = '';
+  if (stickerList.length) {
+    html += '<div class="comment-stickers">';
+    for (const s of stickerList) {
+      const url = typeof s === 'string' ? s : (s && s.url) || '';
+      const name = typeof s === 'string' ? '表情' : (s && s.name) || '表情';
+      const src = safeImgUrl(url);
+      if (!src) continue;
+      html += `<img class="comment-sticker" src="${src}" alt="${escapeAttr(name)}" title="${escapeAttr(name)}" loading="lazy">`;
+    }
+    html += '</div>';
+    // Placeholder-only text is represented by stickers; keep other text.
+    if (rawText && !isStickerPlaceholderText(rawText)) {
+      html += `<div class="comment-text">${escapeHtml(rawText)}</div>`;
+    }
+  } else if (rawText) {
+    html += `<div class="comment-text">${escapeHtml(rawText)}</div>`;
+  }
+
+  if (imgs.length) {
+    const imgGridClass = imgs.length === 1 ? 'comment-images single-img' : 'comment-images';
+    html += `<div class="${imgGridClass}">`;
+    for (const src of imgs) {
+      const url = typeof src === 'string' ? src : (src && src.url) || '';
+      const safe = safeImgUrl(url);
+      if (!safe) continue;
+      html += `<img class="comment-img" src="${safe}" alt="评论图片" loading="lazy" onclick="openImageViewer(this.src)">`;
+    }
+    html += '</div>';
+  }
+  return html;
+}
 function fetchWithTimeout(url, opts = {}, ms = 15000) {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), ms);
