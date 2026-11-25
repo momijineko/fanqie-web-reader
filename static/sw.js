@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fanqie-24';
+const CACHE_NAME = 'fanqie-25';
 const IMG_CACHE = 'fanqie-imgs';
 const STATIC_ASSETS = [
   '/',
@@ -37,16 +37,11 @@ self.addEventListener('activate', e => {
     const stale = keys.filter(k => k !== CACHE_NAME && k !== IMG_CACHE);
     await Promise.all(stale.map(k => caches.delete(k)));
     await self.clients.claim();
-    // Cache version bumped → force open tabs onto the new assets
+    // Notify open tabs — page decides whether to reload (avoid double navigate+reload)
     if (stale.length) {
       const clients = await self.clients.matchAll({ type: 'window' });
       for (let i = 0; i < clients.length; i++) {
-        const c = clients[i];
-        if (typeof c.navigate === 'function') {
-          try { c.navigate(c.url); } catch (err) {}
-        } else {
-          try { c.postMessage({ type: 'SW_UPDATED' }); } catch (err) {}
-        }
+        try { clients[i].postMessage({ type: 'SW_UPDATED' }); } catch (err) {}
       }
     }
   })());
@@ -131,13 +126,18 @@ self.addEventListener('fetch', e => {
   }
 
   // Static assets: stale-while-revalidate — serve cache instantly, refresh in background.
-  // cache: 'reload' bypasses the browser HTTP cache so a deploy that didn't
-  // touch sw.js still revalidates JS/CSS with fresh bytes (not heuristic-stale).
+  // Fetch by URL + cache:'reload' so we never rebuild a navigate Request (throws on
+  // older Chrome/WebView) and still bypass the browser HTTP heuristic cache.
   e.respondWith(
     caches.open(CACHE_NAME).then(cache =>
       cache.match(e.request).then(cached => {
-        const revalidate = new Request(e.request, { cache: 'reload' });
-        const fetched = fetch(revalidate).then(resp => {
+        let fetched;
+        try {
+          fetched = fetch(e.request.url, { cache: 'reload', credentials: 'same-origin' });
+        } catch (err) {
+          fetched = fetch(e.request);
+        }
+        fetched = fetched.then(resp => {
           if (resp && resp.ok) cache.put(e.request, resp.clone()).catch(() => {});
           return resp;
         }).catch(() => cached);

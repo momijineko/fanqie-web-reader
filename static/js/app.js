@@ -922,8 +922,10 @@ function showToast(msg) {
 
 // ---- App update detection / resource refresh ----
 const APP_VERSION_KEY = 'appKnownVersion';
+const APP_UPDATE_SNOOZE_KEY = 'appUpdateSnoozeVersion';
 let _updateBannerShown = false;
 let _updateCheckInflight = null;
+let _updateCheckResult = null; // last settled { outdated, remote }
 let _swRefreshing = false;
 
 async function clearResourceCaches() {
@@ -961,8 +963,13 @@ async function refreshAppResources(opts) {
     if (!confirm('确认刷新应用资源？将清除页面与图片缓存并重新加载，书架与阅读进度会保留。')) return;
   }
   showToast('正在刷新资源…');
-  if (opts.version) {
-    try { localStorage.setItem(APP_VERSION_KEY, opts.version); } catch (e) {}
+  let ver = opts.version || '';
+  if (!ver) {
+    try { ver = await fetchRemoteVersion(); } catch (e) {}
+  }
+  if (ver) {
+    try { localStorage.setItem(APP_VERSION_KEY, ver); } catch (e) {}
+    try { sessionStorage.removeItem(APP_UPDATE_SNOOZE_KEY); } catch (e) {}
   }
   try { await clearResourceCaches(); } catch (e) {}
   const base = location.href.split('#')[0].split('?')[0];
@@ -970,16 +977,39 @@ async function refreshAppResources(opts) {
   location.replace(base + '?_r=' + Date.now() + hash);
 }
 
+async function fetchRemoteVersion() {
+  const r = await fetch(API + '/api/version', { cache: 'no-store' });
+  const data = await r.json();
+  return (data && data.version) ? String(data.version) : '';
+}
+
 function dismissUpdateBanner() {
   _updateBannerShown = false;
   const el = $('updateBanner');
-  if (el) el.classList.remove('show');
+  if (el) {
+    el.classList.remove('show');
+    if (el._remoteVersion) {
+      try { sessionStorage.setItem(APP_UPDATE_SNOOZE_KEY, el._remoteVersion); } catch (e) {}
+    }
+  }
 }
 
-function showUpdateBanner(remoteVersion) {
-  if (_updateBannerShown) return;
-  _updateBannerShown = true;
+function isUpdateSnoozed(remoteVersion) {
+  if (!remoteVersion) return false;
+  try {
+    return sessionStorage.getItem(APP_UPDATE_SNOOZE_KEY) === remoteVersion;
+  } catch (e) { return false; }
+}
+
+function showUpdateBanner(remoteVersion, force) {
+  if (!force && isUpdateSnoozed(remoteVersion)) return;
   let el = $('updateBanner');
+  if (_updateBannerShown && el) {
+    // Banner already up — still refresh the version so 「更新」 writes appKnownVersion
+    if (remoteVersion) el._remoteVersion = remoteVersion;
+    return;
+  }
+  _updateBannerShown = true;
   if (!el) {
     el = document.createElement('div');
     el.id = 'updateBanner';
@@ -1003,6 +1033,14 @@ function showUpdateBanner(remoteVersion) {
   refreshIcons(el);
 }
 
+function _toastUpdateResult(result, fromUser) {
+  if (!fromUser || !result) return;
+  if (result.error === 'empty') showToast('无法获取版本信息');
+  else if (result.error) showToast('检查更新失败');
+  else if (result.outdated) showToast('发现新版本');
+  else showToast('已是最新版本');
+}
+
 /**
  * Proactively compare /api/version with the last-known local version.
  * opts.fromUser — show toast when already up to date / on failure
@@ -1010,43 +1048,50 @@ function showUpdateBanner(remoteVersion) {
  */
 async function checkAppUpdate(opts) {
   opts = opts || {};
-  if (_updateCheckInflight) return _updateCheckInflight;
+  if (_updateCheckInflight) {
+    const result = await _updateCheckInflight;
+    _toastUpdateResult(result, opts.fromUser);
+    if (opts.autoApply && result && result.outdated && result.remote) {
+      await refreshAppResources({ silent: true, version: result.remote });
+    }
+    return !!(result && result.outdated);
+  }
   _updateCheckInflight = (async () => {
     try {
-      const r = await fetch(API + '/api/version', { cache: 'no-store' });
-      const data = await r.json();
-      const remote = (data && data.version) ? String(data.version) : '';
+      const remote = await fetchRemoteVersion();
       if (!remote) {
-        if (opts.fromUser) showToast('无法获取版本信息');
-        return false;
+        _updateCheckResult = { outdated: false, remote: '', error: 'empty' };
+        return _updateCheckResult;
       }
       let local = '';
       try { local = localStorage.getItem(APP_VERSION_KEY) || ''; } catch (e) {}
       if (!local) {
         try { localStorage.setItem(APP_VERSION_KEY, remote); } catch (e) {}
-        if (opts.fromUser) showToast('已是最新版本');
-        return false;
+        _updateCheckResult = { outdated: false, remote };
+        return _updateCheckResult;
       }
       if (local === remote) {
-        if (opts.fromUser) showToast('已是最新版本');
         dismissUpdateBanner();
-        return false;
+        try { sessionStorage.removeItem(APP_UPDATE_SNOOZE_KEY); } catch (e) {}
+        _updateCheckResult = { outdated: false, remote };
+        return _updateCheckResult;
       }
-      if (opts.autoApply) {
-        await refreshAppResources({ silent: true, version: remote });
-        return true;
-      }
-      showUpdateBanner(remote);
-      if (opts.fromUser) showToast('发现新版本');
-      return true;
+      _updateCheckResult = { outdated: true, remote };
+      return _updateCheckResult;
     } catch (e) {
-      if (opts.fromUser) showToast('检查更新失败');
-      return false;
+      _updateCheckResult = { outdated: false, remote: '', error: 'network' };
+      return _updateCheckResult;
     } finally {
       _updateCheckInflight = null;
     }
   })();
-  return _updateCheckInflight;
+  const result = await _updateCheckInflight;
+  _toastUpdateResult(result, opts.fromUser);
+  if (result && result.outdated && result.remote) {
+    if (opts.autoApply) await refreshAppResources({ silent: true, version: result.remote });
+    else showUpdateBanner(result.remote, !!opts.fromUser);
+  }
+  return !!(result && result.outdated);
 }
 
 function setupServiceWorkerUpdates() {
@@ -1067,13 +1112,17 @@ function setupServiceWorkerUpdates() {
       if (!nw) return;
       nw.addEventListener('statechange', () => {
         if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-          // New SW ready — prompt via version check / banner
+          // Wait for version — never show banner with empty version
           checkAppUpdate();
-          showUpdateBanner('');
         }
       });
     });
   }).catch(() => {});
+
+  navigator.serviceWorker.addEventListener('message', ev => {
+    const data = ev.data || {};
+    if (data.type === 'SW_UPDATED') checkAppUpdate();
+  });
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (_swRefreshing) return;
