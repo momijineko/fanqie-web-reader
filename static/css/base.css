@@ -301,7 +301,9 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
   font-size: var(--reader-font-size, 17px);
   line-height: var(--reader-line-height, 1.85);
 }
-.skel-reader-para { display: flex; flex-direction: column; width: 100%; padding-left: 2em; gap: 0.55em; margin-bottom: 0.8em; }
+.skel-reader-para { display: flex; flex-direction: column; width: 100%; gap: 0.55em; margin-bottom: 0.8em; }
+/* Match .page-page p { text-indent: 2em } — only first line */
+.skel-reader-para .skel-line:first-child { margin-left: 2em; width: auto; }
 .skel-reader-para .skel-line { height: 0.95em; border-radius: 3px; }
 .skel-reader-footer {
   display: flex; align-items: center; justify-content: space-between;
@@ -376,48 +378,47 @@ body { font-family: -apple-system, "Noto Sans SC", "PingFang SC", "Microsoft YaH
 .skel-author-books .skel-author-book:nth-child(3) .skel-line,
 .skel-author-books .skel-author-book:nth-child(3) .skel-cover { animation-delay: 0.3s; }
 
-/* ==================== Mobile responsive (skeleton) ==================== */
+/* ==================== Responsive (skeleton) ====================
+   Mirror only what the real UI does:
+   - ≤480px: detail header stacks + smaller cover (components.css)
+   - ≤480px: reader page padding 16×18 (components.css wins over reader.css)
+   - All widths: reader column centers via max(14px, (100% - 680px) / 2)
+   - Sticky / container share max-width 720px + safe-area insets
+   Avoid tablet-only shrinks the real pages do not have. */
+
+/* Very narrow: prevent control chips from squashing */
+@media (max-width: 360px) {
+  .skel-search-controls { gap: 4px; }
+  .skel-search-controls .skel-pill { flex-shrink: 0; }
+  .skel-detail-actions .skel-pill { min-width: 0; }
+}
+
+/* Phone — match components.css @media (max-width: 480px) */
 @media (max-width: 480px) {
-  /* Detail header: stack vertically like real UI */
   .skel-detail-header { flex-direction: column; align-items: center; text-align: center; }
   .skel-cover-lg { width: 100px; height: 138px; }
   .skel-detail-info { align-items: center; width: 100%; }
+  .skel-detail-title-line,
+  .skel-detail-alias-line,
+  .skel-detail-author-line { margin-left: auto; margin-right: auto; }
   .skel-detail-meta { justify-content: center; }
   .skel-detail-actions { justify-content: center; width: 100%; }
 
-  /* Continue card: compact padding */
-  .skel-continue-card { padding: 14px 16px; gap: 12px; }
-  .skel-continue-card .skel-circle { width: 44px; height: 44px; }
+  /* Effective .page-page padding from components.css */
+  .skel-reader-body { padding: 16px 18px; }
 
-  /* Discover: compact cards */
-  .skel-discover-grid { gap: 10px; }
-  .skel-discover-card { padding: 12px; gap: 10px; }
-  .skel-discover-card-icon { width: 36px; height: 36px; }
-
-  /* Reader body: match .page-page mobile padding */
-  .skel-reader-body { padding: 10px 14px; gap: 14px; }
-
-  /* Chapter items */
-  .skel-chapter-item { padding: 12px 14px; }
-  .skel-chapter-header { padding: 12px 14px; }
-
-  /* Shelf grid */
-  .skel-shelf-grid { grid-column-gap: 24px; grid-row-gap: 16px; }
-
-  /* Search controls */
-  .skel-search-controls { gap: 4px; }
   .skel-search-controls .skel-pill { flex-shrink: 0; }
-
-  /* Book cards */
-  .skeleton-card { padding: 10px; gap: 10px; }
-  .skel-author-books .skel-author-book { padding: 14px 0; }
+  .skel-discover-tags { justify-content: flex-start; }
 }
 
-/* Tablet / mid-range adjustments */
-@media (min-width: 481px) and (max-width: 720px) {
-  .skel-detail-header { gap: 14px; }
-  .skel-cover-lg { width: 100px; height: 138px; }
-  .skel-discover-grid { gap: 10px; }
-  .skel-continue-card { padding: 14px 16px; }
-  .skel-shelf-grid { grid-column-gap: 36px; }
+/* Prefer reduced motion / battery: keep layout, tone down shimmer */
+@media (prefers-reduced-motion: reduce) {
+  .skel-line, .skel-circle, .skel-pill, .skel-rect,
+  .skel-cover, .skel-cover-lg, .skel-cover-shelf,
+  .skel-status-badge, .skel-tag-pill, .skel-detail-stat-line,
+  .skel-chapter-name, .skel-chapter-time, .skel-detail-sticky-btn,
+  .skel-author-avatar-c, .skel-author-follow,
+  .skel-shelf-name, .skel-shelf-progress, .skel-comments-title {
+    animation: none;
+  }
 }

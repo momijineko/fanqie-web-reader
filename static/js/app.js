@@ -951,9 +951,9 @@ function skeletonDetail() {
     <div class="skel-detail-header">
       <div class="skel-cover-lg"></div>
       <div class="skel-detail-info">
-        <div class="skel-line skel-detail-title-line" style="margin-right:18%"></div>
-        <div class="skel-line skel-detail-alias-line" style="margin-right:40%"></div>
-        <div class="skel-line skel-detail-author-line" style="margin-right:55%"></div>
+        <div class="skel-line skel-detail-title-line" style="width:82%"></div>
+        <div class="skel-line skel-detail-alias-line" style="width:60%"></div>
+        <div class="skel-line skel-detail-author-line" style="width:45%"></div>
         <div class="skel-detail-meta">
           <div class="skel-tag-pill"></div>
           <div class="skel-detail-stat-line" style="width:40px"></div>
